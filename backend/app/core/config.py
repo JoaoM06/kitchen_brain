@@ -1,6 +1,5 @@
 from pydantic_settings import BaseSettings
 from pydantic import AnyUrl
-from typing import List
 
 class Settings(BaseSettings):
     DATABASE_URL: AnyUrl
