@@ -26,8 +26,8 @@ class User(Base):
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    preferencias: Mapped[Optional[dict]] = mapped_column(
-        JSONB, nullable=True, default=None
+    preferencias: Mapped[Optional[List[str]]] = mapped_column(
+        ARRAY(String(100)), nullable=True, default=None
     )
     alergias: Mapped[Optional[List[str]]] = mapped_column(
         ARRAY(String(100)), nullable=True, default=None
@@ -35,3 +35,4 @@ class User(Base):
     restricoes_alimentares: Mapped[Optional[List[str]]] = mapped_column(
         ARRAY(String(100)), nullable=True, default=None
     )
+    bio: Mapped[str] = mapped_column(String(255), nullable=True, default=None)
