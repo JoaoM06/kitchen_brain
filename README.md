@@ -1,6 +1,7 @@
 # kitchen_brain
 
 uvicorn app.main:app --reload
+
 ////////////////////////////////////////////////////////////
 Documentação ConfigsScreen.jsx
 Importações
