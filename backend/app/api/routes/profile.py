@@ -11,7 +11,7 @@ from app.core.security import hash_password, verify_password, create_access_toke
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 @router.post("/")
-def profilePost(body: ProfileInput, db: Session = Depends(get_db), auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),):
+def profile_post(body: ProfileInput, db: Session = Depends(get_db), auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),):
     user = get_current_user(auth.credentials, db)
     user.bio = body.bio
     if body.nome:
@@ -22,6 +22,6 @@ def profilePost(body: ProfileInput, db: Session = Depends(get_db), auth: HTTPAut
     db.commit()
 
 @router.get("/")
-def profileData(db: Session = Depends(get_db), auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),):
+def profile_data(db: Session = Depends(get_db), auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),):
     user = get_current_user(auth.credentials, db)
     return user
