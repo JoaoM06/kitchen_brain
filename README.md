@@ -6,6 +6,7 @@ Documentação ConfigsScreen.jsx
 
 Visão Geral
 
+
 O ConfigsScreen é um componente de tela que exibe uma lista de opções de configuração (como "Perfil", "Notificações", "Sobre", etc.). Cada item da lista é clicável e exibe um ícone, um título e uma seta indicativa. A lista é renderizada de forma eficiente utilizando o componente FlatList.
 
 Funcionalidades Principais
@@ -25,6 +26,9 @@ Funcionalidades Principais
 Dependências
 
 Para funcionar corretamente, o componente importa os seguintes pacotes e componentes:
+
+<img width="707" height="43" alt="image3primeira" src="https://github.com/user-attachments/assets/0fc45a12-633e-4019-97ff-39d44a83004f" />
+
 
 
     React Native:
@@ -47,6 +51,9 @@ Estrutura do Componente
 
 O componente é organizado da seguinte forma:
 
+<img width="703" height="271" alt="image5" src="https://github.com/user-attachments/assets/446263b9-e350-4fbe-bf80-93defbc15b02" />
+
+
     View (container): O contêiner raiz que envolve toda a tela.
 
     Text (header): O título principal da tela, "Configurações".
@@ -65,6 +72,9 @@ Função renderItem
 
 A função renderItem é responsável por renderizar cada linha da FlatList. A estrutura de cada item é:
 
+<img width="705" height="136" alt="image4" src="https://github.com/user-attachments/assets/e8b6a718-9ae7-48cf-ad70-62b134b61945" />
+
+
     TouchableOpacity (item): Invólucro que torna a linha inteira clicável.
 
         Ionicons (icon): Exibe o ícone (item.icon) à esquerda.
@@ -79,11 +89,16 @@ Estrutura de Dados
 
 O componente utiliza um array de objetos estático chamado settings para alimentar a FlatList. Cada objeto no array deve seguir a seguinte estrutura:
 
-Exemplo:
+<img width="705" height="128" alt="imagem2" src="https://github.com/user-attachments/assets/a8924884-e5a8-4dad-aa87-3c7af0285492" />
+
+
 
 Estilização (StyleSheet)
 
 Os estilos do componente estão centralizados em um objeto StyleSheet para melhor organização e performance.
+
+<img width="164" height="366" alt="image" src="https://github.com/user-attachments/assets/8c4a6617-3ae3-47ac-b6e4-d9bb8f495888" />
+
 
     container: Estilo do contêiner principal. Define o flex, backgroundColor e padding.
 
