@@ -112,6 +112,94 @@ Os estilos do componente estão centralizados em um objeto StyleSheet para melho
 
     separator: Estilo da linha fina que separa os itens da lista.
 
+////////////////////////////////////////////////////////////////////////
+
+Documentação VoiceRecScreen.jsx
+
+O código implementa uma tela de gravação de voz no React Native (com Expo).
+Ele grava áudio via expo-av, exibe uma animação pulsante que simula o volume da fala, e gera palavras aleatórias para simular uma transcrição.
+
+Início do componente
+
+![função export](./mobile/imagens/imgexport.png)
+
+Cria a tela principal. Recebe ```navigation``` se quiser trocar de telas.
+
+Estados
+
+![função export](./mobile/imagens/States.png)
+```
+recording: guarda o objeto da gravação.
+
+isRecording: indica se está gravando ou não.
+
+recognizedText: texto que aparece na caixa (simulação da fala).
+
+amplitude: controla o tamanho do círculo animado (1 = normal).
+```
+Função da animação
+
+![função export](./mobile/imagens/WaveAnim.png)
+
+Faz o círculo “pulsar”.
+A cada chamada, o valor muda de 1 pra algo tipo 1.3, e volta.
+useNativeDriver: true faz a animação mais leve (roda no thread nativo).
+
+Função para iniciar a gravação
+
+![função export](./mobile/imagens/StartRecFunc.png)
+
+Pede permissão pro microfone.
+Se o usuário negar, mostra um alerta e sai da função.
+
+![função export](./mobile/imagens/AudioContainer.png)
+
+Cria e inicia uma gravação com alta qualidade.
+O objeto recording é retornado e contém o controle da gravação.
+
+Função para parar a gravação
+
+![função export](./mobile/imagens/StopRecFunc.png)
+
+Quando o usuário clica em “Parar”:
+
+Para a gravação.
+Obtém o endereço (uri) do arquivo de áudio.
+Reseta os estados e animação.
+
+Interface Visual
+
+Título
+
+![função export](./mobile/imagens/Title.png)
+
+Texto no topo da tela. (Poderia ser “Gravação de Voz”.)
+
+Caixa de texto
+
+![função export](./mobile/imagens/TextBox.png)
+
+Mostra o texto “reconhecido”.
+O usuário também pode editar manualmente.
+
+Logo + círculo animado
+
+![função export](./mobile/imagens/Logo+Circle.png)
+
+Aqui rola a animação principal:
+
+O círculo verde (pulseCircle) cresce e diminui conforme o som.
+A logo fica sobreposta no centro (estática).
+
+Botão de gravação
+
+![função export](./mobile/imagens/RecButton.png)
+
+O botão muda de cor e ícone:
+
+Verde com microfone quando não grava.
+Vermelho com microfone cortado quando está gravando.
+O clique alterna entre startRecording e stopRecording.
 
 
 
