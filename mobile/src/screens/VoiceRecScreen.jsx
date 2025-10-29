@@ -15,7 +15,7 @@ export default function VoiceRecScreen({ navigation }) {
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recognizedText, setRecognizedText] = useState("");
-  const amplitude = useRef(new Animated.Value(1)).current; // escala do círculo pulsante
+  const amplitude = useRef(new Animated.Value(1)).current; 
 
   const animateWave = (value) => {
     Animated.timing(amplitude, {
@@ -49,10 +49,10 @@ export default function VoiceRecScreen({ navigation }) {
       const interval = setInterval(async () => {
         const status = await recording.getStatusAsync();
         if (status.isRecording) {
-          const randomVolume = Math.random() * 0.4 + 1; // 1 a 1.4
+          const randomVolume = Math.random() * 0.4 + 1; 
           animateWave(randomVolume);
 
-          // Simula transcrição gradual
+
           const fakeWords = ["olá", "tudo", "bem", "como", "vai", "você", "?"];
           const randomWord =
             fakeWords[Math.floor(Math.random() * fakeWords.length)];
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 100,
-    backgroundColor: "rgba(82, 162, 103, 0.25)", // cor e transparência ajustadas
+    backgroundColor: "rgba(82, 162, 103, 0.25)", 
   },
   logo: {
     width: 150,
