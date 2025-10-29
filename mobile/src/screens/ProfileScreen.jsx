@@ -51,8 +51,10 @@ export default function PerfilScreen({ navigation }) {
         <TouchableOpacity>
           <Text style={styles.headerButton}>Editar</Text>
         </TouchableOpacity>
+
         <Text style={styles.headerText}>Perfil</Text>
-        <TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate('Config')}>
           <Text style={styles.headerButton}>Config</Text>
         </TouchableOpacity>
       </View>
