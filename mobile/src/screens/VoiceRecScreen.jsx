@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert } from "react-native";
+import { View, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { Audio } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Rect } from "react-native-svg";
@@ -10,18 +10,21 @@ export default function VoiceSearchScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [levels, setLevels] = useState(Array(40).fill(0));
 
-  // Simula waveform enquanto grava
+  // Atualiza a onda conforme a voz
   useEffect(() => {
     let interval;
-    if (isListening) {
-      interval = setInterval(() => {
-        setLevels(levels.map(() => Math.random() * 80));
+    if (isListening && recording) {
+      interval = setInterval(async () => {
+        const status = await recording.getStatusAsync();
+        const amplitude = status.metering || 0;
+        const scaled = Math.max(0, amplitude * 2);
+        setLevels(Array(40).fill(scaled));
       }, 100);
     } else {
       setLevels(Array(40).fill(0));
     }
     return () => clearInterval(interval);
-  }, [isListening]);
+  }, [isListening, recording]);
 
   const startRecording = async () => {
     try {
@@ -36,9 +39,33 @@ export default function VoiceSearchScreen() {
         playsInSilentModeIOS: true,
       });
 
+      const recordingOptions = {
+        android: {
+          extension: ".m4a",
+          outputFormat: Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_MPEG_4,
+          audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AAC,
+          sampleRate: 44100,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          isMeteringEnabled: true,
+        },
+        ios: {
+          extension: ".caf",
+          audioQuality: Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_HIGH,
+          sampleRate: 44100,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+          isMeteringEnabled: true,
+        },
+      };
+
       const rec = new Audio.Recording();
-      await rec.prepareToRecordAsync(Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY);
+      await rec.prepareToRecordAsync(recordingOptions);
       await rec.startAsync();
+
       setRecording(rec);
       setIsListening(true);
     } catch (err) {
@@ -53,19 +80,34 @@ export default function VoiceSearchScreen() {
       setRecording(null);
       setIsListening(false);
 
-      // Aqui você envia o arquivo de áudio para sua API de Speech-to-Text
-      const text = await recognizeSpeech(uri);
+      const text = await recognizeSpeech(uri); // envia para backend/Whisper
       setSearchQuery(text);
     } catch (err) {
       console.error("Erro ao parar gravação:", err);
     }
   };
 
-  // Simulação de função de reconhecimento de voz
+  // Função de integração com API real de Speech-to-Text
   const recognizeSpeech = async (audioUri) => {
-    // Substitua por chamada real a Google Speech-to-Text ou OpenAI Whisper
-    console.log("Áudio para reconhecimento:", audioUri);
-    return "Exemplo de resultado de voz"; // texto simulado
+    try {
+      const formData = new FormData();
+      formData.append("audio", {
+        uri: audioUri,
+        type: "audio/x-wav",
+        name: "recording.wav",
+      });
+
+      const response = await fetch("http://192.168.68.104:3000/speech-to-text", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      return data.text || "";
+    } catch (err) {
+      console.error("Erro ao reconhecer fala:", err);
+      return "";
+    }
   };
 
   return (
@@ -78,13 +120,13 @@ export default function VoiceSearchScreen() {
       />
 
       <View style={styles.audioContainer}>
-        <Svg height="80" width="200" style={{ position: "absolute", bottom: -585 }}>
+        <Svg height="80" width="200">
           {levels.map((level, i) => (
             <Rect
               key={i}
-              x={i * 10}
-              y={30 - level}
-              width={4}
+              x={i * 5}
+              y={80 - level}
+              width={3}
               height={level}
               fill="green"
               rx={1}
@@ -108,7 +150,12 @@ export default function VoiceSearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", paddingTop: 80, backgroundColor: "#fff" },
+  container: {
+    flex: 1,
+    alignItems: "center",
+    paddingTop: 80,
+    backgroundColor: "#fff",
+  },
   searchInput: {
     width: "90%",
     height: 50,
@@ -121,13 +168,13 @@ const styles = StyleSheet.create({
   },
   audioContainer: {
     width: 200,
-    height: 80,
+    height: 100,
     justifyContent: "center",
     alignItems: "center",
   },
   micButton: {
     position: "absolute",
-    bottom: -600,
+    bottom: -20,
     backgroundColor: "#7b808a",
     borderRadius: 50,
     padding: 12,

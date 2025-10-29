@@ -8,6 +8,7 @@ import RecipesScreen from "../screens/RecipesScreen";
 import StockScreen from "../screens/StockScreen";
 import ConfigsScreen from "../screens/ConfigsScreen";
 import VoiceRecScreen from "../screens/VoiceRecScreen";
+import ProfileScreen from "../screens/ProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -26,6 +27,7 @@ export default function RootNavigator() {
         <Stack.Screen name="Stock" component={StockScreen} />
         <Stack.Screen name="Config" component={ConfigsScreen} />
         <Stack.Screen name="VoiceRec" component={VoiceRecScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
