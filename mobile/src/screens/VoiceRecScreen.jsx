@@ -7,20 +7,20 @@ import {
   Easing,
   StyleSheet,
   TextInput,
-  Image,
 } from "react-native";
 import { Audio } from "expo-av";
+import { Ionicons } from "@expo/vector-icons";
 
-export default function VoiceRecScreen() {
+export default function VoiceRecScreen({ navigation }) {
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recognizedText, setRecognizedText] = useState("");
-  const amplitude = useRef(new Animated.Value(1)).current; // começa com escala 1
+  const amplitude = useRef(new Animated.Value(1)).current; // escala do círculo pulsante
 
   const animateWave = (value) => {
     Animated.timing(amplitude, {
       toValue: value,
-      duration: 100,
+      duration: 120,
       easing: Easing.linear,
       useNativeDriver: true,
     }).start();
@@ -49,10 +49,10 @@ export default function VoiceRecScreen() {
       const interval = setInterval(async () => {
         const status = await recording.getStatusAsync();
         if (status.isRecording) {
-          const randomVolume = Math.random() * 0.5 + 1; // escala mínima 1, máxima ~1.5
+          const randomVolume = Math.random() * 0.4 + 1; // 1 a 1.4
           animateWave(randomVolume);
 
-          // Simula reconhecimento de voz
+          // Simula transcrição gradual
           const fakeWords = ["olá", "tudo", "bem", "como", "vai", "você", "?"];
           const randomWord =
             fakeWords[Math.floor(Math.random() * fakeWords.length)];
@@ -68,6 +68,7 @@ export default function VoiceRecScreen() {
 
   const stopRecording = async () => {
     if (!recording) return;
+
     try {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
@@ -78,19 +79,19 @@ export default function VoiceRecScreen() {
 
     setIsRecording(false);
     setRecording(null);
-    animateWave(1); // volta à escala normal
+    animateWave(1);
   };
 
   const waveScale = amplitude.interpolate({
-    inputRange: [1, 1.5],
-    outputRange: [1, 1.5],
+    inputRange: [1, 1.4],
+    outputRange: [1, 1.4],
     extrapolate: "clamp",
   });
 
   return (
     <View style={styles.container}>
       {/* Título */}
-      <Text style={styles.title}>Adicionar Item</Text>
+      <Text style={styles.title}>Pesquisa por voz</Text>
 
       {/* Caixa de texto */}
       <TextInput
@@ -101,15 +102,24 @@ export default function VoiceRecScreen() {
         multiline
       />
 
-      {/* Logo pulsante */}
-      <Animated.Image
-        source={require("../../assets/imgs/logo-kitchenbrain.png")}
-        style={[
-          styles.logo,
-          { transform: [{ scale: waveScale }] },
-        ]}
-        resizeMode="contain"
-      />
+      {/* Área central com logo e círculo */}
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <View style={styles.logoContainer}>
+          {/* Círculo pulsante */}
+          <Animated.View
+            style={[
+              styles.pulseCircle,
+              { transform: [{ scale: waveScale }] },
+            ]}
+          />
+          {/* Logo fixa */}
+          <Animated.Image
+            source={require("../../assets/imgs/logo-kitchenbrain.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+      </View>
 
       {/* Botão de gravação */}
       <TouchableOpacity
@@ -119,6 +129,12 @@ export default function VoiceRecScreen() {
           { backgroundColor: isRecording ? "#ef4444" : "#52A267" },
         ]}
       >
+        <Ionicons
+          name={isRecording ? "mic-off" : "mic"}
+          size={20}
+          color="#fff"
+          style={{ marginRight: 8 }}
+        />
         <Text style={styles.buttonText}>
           {isRecording ? "Parar" : "Gravar"}
         </Text>
@@ -132,18 +148,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     alignItems: "center",
-    justifyContent: "center",
+    paddingTop: 60,
+    paddingBottom: 30,
   },
   title: {
-    position: "absolute",
-    top: 60,
     fontSize: 22,
     fontWeight: "700",
-    color: "#000000ff",
+    color: "#000",
   },
   textBox: {
-    position: "absolute",
-    top: 120,
     width: "85%",
     borderWidth: 1,
     borderColor: "#ccc",
@@ -154,17 +167,31 @@ const styles = StyleSheet.create({
     color: "#333",
     minHeight: 60,
     textAlignVertical: "top",
+    marginTop: 20,
+  },
+  logoContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 20,
+  },
+  pulseCircle: {
+    position: "absolute",
+    width: 150,
+    height: 150,
+    borderRadius: 100,
+    backgroundColor: "rgba(82, 162, 103, 0.25)", // cor e transparência ajustadas
   },
   logo: {
-    width: 200,
-    height: 200,
-    marginTop: 0,
+    width: 150,
+    height: 150,
   },
   button: {
-    marginTop: 50,
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 30,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 200,
   },
   buttonText: {
     color: "#fff",

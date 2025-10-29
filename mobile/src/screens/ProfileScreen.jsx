@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import FooterNav from '../components/FooterNav'; // 👈 import da barra de navegação
 
 const listaReceitas = [
   {
@@ -28,7 +29,7 @@ const listaReceitas = [
   },
 ];
 
-export default function PerfilScreen() {
+export default function PerfilScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('Receitas');
 
   const renderItem = ({ item }) => (
@@ -45,7 +46,7 @@ export default function PerfilScreen() {
 
   return (
     <View style={styles.container}>
-      {/* HEADER (agora maior) */}
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity>
           <Text style={styles.headerButton}>Editar</Text>
@@ -96,7 +97,7 @@ export default function PerfilScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* RECEITAS */}
+      {/* LISTA DE RECEITAS */}
       <FlatList
         data={listaReceitas}
         keyExtractor={(item) => item.id}
@@ -105,20 +106,8 @@ export default function PerfilScreen() {
         contentContainerStyle={{ paddingHorizontal: 20 }}
       />
 
-      {/* MENU DE BAIXO */}
-      <View style={styles.bottomMenu}>
-        <View style={styles.navButtons}>
-          {[0, 1, 2, 3, 4].map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.menuCircle,
-                index === 4 && { backgroundColor: '#69a66a' }, 
-              ]}
-            />
-          ))}
-        </View>
-      </View>
+      {/* BARRA INFERIOR */}
+      <FooterNav active="Profile" onNavigate={navigation.replace} />
     </View>
   );
 }
@@ -126,16 +115,15 @@ export default function PerfilScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', alignItems: 'center' },
 
-
   header: {
     width: '100%',
-    height: 80, //tamanho se tu quiser mudar
+    height: 80,
     backgroundColor: '#69a66a',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     paddingHorizontal: 20,
-    paddingBottom: 10, 
+    paddingBottom: 10,
   },
   headerText: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
   headerButton: { color: '#fff', fontSize: 14, marginLeft: 30 },
@@ -147,7 +135,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     borderWidth: 3,
     borderColor: '#fff',
-    marginTop: 20, 
+    marginTop: 20,
   },
   name: { fontSize: 22, fontWeight: 'bold', marginTop: 10 },
   bio: { textAlign: 'center', color: '#999', marginTop: 5 },
@@ -177,21 +165,4 @@ const styles = StyleSheet.create({
   itemTitulo: { fontWeight: 'bold', fontSize: 16 },
   itemSub: { color: '#666', fontSize: 12 },
   bookmark: { width: 20, height: 20, backgroundColor: '#69a66a', borderRadius: 4 },
-
-  bottomMenu: {
-    width: '100%',
-    height: 120, 
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    justifyContent: 'flex-start', 
-    alignItems: 'center',
-    paddingTop: 15,
-  },
-  navButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '90%',
-  },
-  menuCircle: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#ccc' },
 });
