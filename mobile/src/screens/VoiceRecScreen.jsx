@@ -97,7 +97,7 @@ export default function VoiceSearchScreen() {
         name: "recording.wav",
       });
 
-      const response = await fetch("http://192.168.68.104:3000/speech-to-text", {
+      const response = await fetch("http://<inserir IP aqui>:3000/speech-to-text", {
         method: "POST",
         body: formData,
       });
