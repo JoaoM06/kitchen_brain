@@ -40,7 +40,7 @@ export default function WelcomeScreen({ navigation }) {
           Entrar como visitante?{" "}
           <Text
             style={styles.visitorLink}
-            onPress={() => navigation.navigate("VoiceRec")}
+            onPress={() => navigation.navigate("Onboarding")}
           >
             Entrar
           </Text>
