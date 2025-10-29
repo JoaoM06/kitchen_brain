@@ -45,7 +45,7 @@ export default function StockScreen({ navigation }) {
 
         <DefaultButton
           variant="primary"
-          onPress={() => {/* TODO: popup de adicionar item */}}
+          onPress={() => navigation.navigate("AddItemOptions")}
           style={styles.addBtn}
         >
           Adicionar item
