@@ -112,6 +112,14 @@ Os estilos do componente estão centralizados em um objeto StyleSheet para melho
 
     separator: Estilo da linha fina que separa os itens da lista.
 
+////////////////////////////////////////////////////////////////////////
+
+Documentação VoiceRecScreen.jsx
+
+O código implementa uma tela de gravação de voz no React Native (com Expo).
+Ele grava áudio via expo-av, exibe uma animação pulsante que simula o volume da fala, e gera palavras aleatórias para simular uma transcrição.
+
+
 
 
 
