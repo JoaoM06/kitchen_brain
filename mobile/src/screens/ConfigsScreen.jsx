@@ -10,7 +10,7 @@ export default function ConfigsScreen({ navigation }) {
       id: '3', 
       title: 'Permissões', 
       icon: <MaterialIcons name="assignment" size={24} color="black" />, 
-      screen: "Permissions" // navegação para tela avançada
+      screen: "Permissions" 
     },
     { id: '4', title: 'Acessibilidade', icon: <FontAwesome5 name="universal-access" size={24} color="black" /> },
     { id: '5', title: 'Logout', icon: <Ionicons name="log-out-outline" size={24} color="black" /> },
