@@ -91,7 +91,7 @@ export default function VoiceRecScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* Título */}
-      <Text style={styles.title}>Pesquisa por voz</Text>
+      <Text style={styles.title}>Adicionar Item</Text>
 
       {/* Caixa de texto */}
       <TextInput
