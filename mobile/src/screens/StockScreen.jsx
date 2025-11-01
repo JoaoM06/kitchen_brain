@@ -45,7 +45,7 @@ export default function StockScreen({ navigation }) {
 
         <DefaultButton
           variant="primary"
-          onPress={() => {navigation.navigate("VoiceRec")}}
+          onPress={() => navigation.navigate("AddItemOptions")}
           style={styles.addBtn}
         >
           Adicionar item
