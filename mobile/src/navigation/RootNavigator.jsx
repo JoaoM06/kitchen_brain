@@ -6,6 +6,7 @@ import SignupScreen from "../screens/SignupScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
 import RecipesScreen from "../screens/RecipesScreen";
 import StockScreen from "../screens/StockScreen";
+import VoiceRecScreen from "../screens/VoiceRecScreen";
 import AddItemOptionsScreen from "../screens/AddItemOptionsScreen";
 import BarcodeScannerScreen from "../screens/BarcodeScannerScreen";
 
@@ -24,6 +25,7 @@ export default function RootNavigator() {
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="Recipes" component={RecipesScreen} />
         <Stack.Screen name="Stock" component={StockScreen} />
+        <Stack.Screen name="VoiceRec" component={VoiceRecScreen} />
         <Stack.Screen name="AddItemOptions" component={AddItemOptionsScreen} />
         <Stack.Screen name="BarcodeScannerScreen" component={BarcodeScannerScreen} options={{ headerShown: false }}/>
       </Stack.Navigator>

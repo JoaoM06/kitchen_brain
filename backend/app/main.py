@@ -35,7 +35,8 @@ app.add_middleware(
 def health():
     return {"ok": True}
 
-# Routers
-app.include_router(auth_router, tags=["auth"])
+app.include_router(auth_router)
+app.include_router(profile_router)
+app.include_router(transcribe_router)
 app.include_router(settings_router, tags=["settings"])
 app.include_router(devices_router, tags=["devices"])
