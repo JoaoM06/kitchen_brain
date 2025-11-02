@@ -1,16 +1,13 @@
 from __future__ import annotations
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-
 from app.db.session import get_db
 from app.db.models.settings import UserSettings
-from app.db.models.lgpd import Consentimento  # já existente no teu projeto
+from app.db.models.lgpd import Consentimento
 from app.schemas.settings import SettingsRead, SettingsUpdate
 
-# ajuste o import abaixo para sua função real de autenticação:
-# ex.: from app.api.deps import get_current_user
-from app.api.routes.auth import get_current_user  # se for diferente, ajuste!
+from app.api.deps import get_current_user
 
 router = APIRouter()
 
