@@ -2,16 +2,25 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome5, Entypo } from '@expo/vector-icons'; 
 
-export default function Configs({ navigation }) {
+export default function ConfigsScreen({ navigation }) {
   const settings = [
     { id: '1', title: 'Ajuda', icon: <Ionicons name="ios-person-circle-outline" size={24} color="black" /> },
     { id: '2', title: 'Sobre', icon: <Entypo name="info-with-circle" size={24} color="black" /> },
-    { id: '3', title: 'Permissões', icon: <MaterialIcons name="assignment" size={24} color="black" /> },
+    { 
+      id: '3', 
+      title: 'Permissões', 
+      icon: <MaterialIcons name="assignment" size={24} color="black" />, 
+      screen: "Permissions" 
+    },
     { id: '4', title: 'Acessibilidade', icon: <FontAwesome5 name="universal-access" size={24} color="black" /> },
+    { id: '5', title: 'Logout', icon: <Ionicons name="log-out-outline" size={24} color="black" /> },
   ];
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.item} onPress={() => console.log(`${item.title} clicado`)}>
+    <TouchableOpacity 
+      style={styles.item} 
+      onPress={() => item.screen ? navigation.navigate(item.screen) : console.log(`${item.title} clicado`)}
+    >
       <View style={styles.icon}>{item.icon}</View>
       <Text style={styles.title}>{item.title}</Text>
       <Ionicons name="chevron-forward" size={20} color="black" />
@@ -63,4 +72,3 @@ const styles = StyleSheet.create({
     opacity: 0.1,
   },
 });
-

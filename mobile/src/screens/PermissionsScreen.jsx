@@ -306,14 +306,14 @@ export default function Configs() {
     return (
       <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
         <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 10 }}>Carregando configurações…</Text>
+        <Text style={{ marginTop: 10 }}>Carregando permissões…</Text>
       </View>
     );
   }
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.header}>Configurações</Text>
+      <Text style={styles.header}>Permissões</Text>
 
       {rows.map((row) => {
         const enabled = !!consent[row.key];
