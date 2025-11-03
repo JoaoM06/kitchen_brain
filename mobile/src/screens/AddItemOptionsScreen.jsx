@@ -1,4 +1,4 @@
-import React from "react";
+import React from "react"; 
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { colors } from "../theme/colors";
 import SafeScreen from "../components/SafeScreen";
@@ -17,7 +17,7 @@ export default function AddItemOptionsScreen({ navigation }) {
         <OptionButton
           icon={<MaterialCommunityIcons name="pencil-outline" size={22} color="#fff" />}
           title="Adicionar item manualmente"
-          onPress={() => {/* navegue para o formulário manual */}}
+          onPress={() => navigation.navigate("ManualAddScreen")}
         />
         <OptionButton
           icon={<Ionicons name="scan-outline" size={22} color="#fff" />}

@@ -8,6 +8,8 @@ import RecipesScreen from "../screens/RecipesScreen";
 import StockScreen from "../screens/StockScreen";
 import AddItemOptionsScreen from "../screens/AddItemOptionsScreen";
 import BarcodeScannerScreen from "../screens/BarcodeScannerScreen";
+import ProfileScreen from "../screens/ProfileScreen";
+import ManualAddScreen from "../screens/ManualAddScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -25,7 +27,9 @@ export default function RootNavigator() {
         <Stack.Screen name="Recipes" component={RecipesScreen} />
         <Stack.Screen name="Stock" component={StockScreen} />
         <Stack.Screen name="AddItemOptions" component={AddItemOptionsScreen} />
+        <Stack.Screen name="ManualAddScreen" component={ManualAddScreen} />
         <Stack.Screen name="BarcodeScannerScreen" component={BarcodeScannerScreen} options={{ headerShown: false }}/>
+        <Stack.Screen name="Profile" component={ProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
