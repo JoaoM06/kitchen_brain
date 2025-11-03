@@ -113,7 +113,7 @@ export default function PerfilScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: '#fff'},
 
   header: {
     width: '100%',
@@ -148,6 +148,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     overflow: 'hidden',
     width: '90%',
+    alignSelf: 'center',
   },
   tab: { flex: 1, padding: 10, alignItems: 'center', backgroundColor: '#fff' },
   activeTab: { backgroundColor: '#e6f2e6' },

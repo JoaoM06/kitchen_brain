@@ -27,7 +27,7 @@ export default function AddItemOptionsScreen({ navigation }) {
         <OptionButton
           icon={<Ionicons name="mic-outline" size={22} color="#fff" />}
           title="Adicionar item por voz"
-          onPress={() => {/* navegue para a tela de voz */}}
+          onPress={() => {navigation.navigate("VoiceRec")}}
         />
       </ScrollView>
     </SafeScreen>
