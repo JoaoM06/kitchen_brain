@@ -8,10 +8,10 @@ class BaseListaCompras(BaseModel):
     validade: date | None = None
     comprado: bool = False
 
-class ListaComprasCriar(ShoppingListBase):
+class ListaComprasCriar(BaseListaCompras):
     pass
 
-class ListaComprasOut(ShoppingListBase):
+class ListaComprasOut(BaseListaCompras):
     id: int
 
     class Config:
