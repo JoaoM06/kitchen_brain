@@ -202,7 +202,77 @@ Vermelho com microfone cortado quando está gravando.
 O clique alterna entre startRecording e stopRecording.
 
 
+Documentação CardápioBotScreen
 
+1. Importações
 
+![importações](./mobile/imagens/importsCard.png)
+
+```
+React, useState, useEffect, useRef: Hooks essenciais do React para estado, efeitos colaterais e referências.
+
+ActivityIndicator: Spinner para mostrar carregamento.
+
+FlatList: Lista eficiente para mensagens do chat.
+
+KeyboardAvoidingView: Ajusta a UI quando o teclado aparece (iOS/Android).
+
+Platform: Detecta a plataforma para comportamentos diferentes.
+
+TextInput, TouchableOpacity, View, Text: Componentes básicos de interface.
+
+Keyboard: Permite escutar eventos do teclado.
+
+useHeaderHeight: Retorna a altura real do header do navigation stack (importante para offset do teclado).
+
+Constants: Permite pegar configurações do Expo (como API_KEY).
+
+Ionicons: Ícones da biblioteca de ícones do Expo/React Native
+```
+2. Constantes de configuração
+```
+const GEMINI_MODEL = "gemini-2.5-flash"; // modelo Gemini usado para gerar conteúdo
+const API_KEY = Constants.expoConfig?.extra?.GEMINI_API_KEY; // chave da API do Gemini
+```
+- Define o modelo generativo e a chave de API.
+```
+const EMOJIS = ["😀","😁","😂","😊","😍","😋","😎","🤔","🙌","👍","👎","🥗","🍲","🍛","🍳","🥪","🍎","🥦","🧀","🥖","🍗"];
+```
+- Array de emojis disponíveis para o teclado emoji do chat.
+```
+const STARTER_BOT_MSG = {
+  id: "m0",
+  role: "bot",
+  text: "Bom dia! Sou seu assistente de geração de cardápios! Inicie uma conversa comigo para que eu possa te auxiliar a montar o melhor cardápio possível para você!",
+};
+```
+- Mensagem inicial do bot ao abrir a tela.
+
+3. Estado do componente
+```
+const [messages, setMessages] = useState([STARTER_BOT_MSG]); // array de mensagens
+const [text, setText] = useState(""); // texto do input
+const [loading, setLoading] = useState(false); // indica se uma requisição está em andamento
+const [showEmoji, setShowEmoji] = useState(false); // mostra ou esconde o painel de emojis
+```
+- messages: histórico do chat.
+
+- text: texto digitado no input.
+
+- loading: controla spinner e bloqueio do input enquanto o bot responde.
+
+- showEmoji: boolean que controla a exibição do teclado emoji.
+
+4. Refs e altura do header
+```
+const listRef = useRef(null); // referência para FlatList (scroll)
+const inputRef = useRef(null); // referência para TextInput (focus)
+const headerHeight = useHeaderHeight(); // altura real do header para offset do teclado
+```
+- listRef: usado para scroll automático ao enviar/receber mensagens.
+
+- inputRef: permite focar o input programaticamente.
+
+- headerHeight: usado no KeyboardAvoidingView para calcular offset.
 
 
