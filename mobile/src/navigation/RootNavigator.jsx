@@ -12,6 +12,7 @@ import PermissionsScreen from "../screens/PermissionsScreen";
 import VoiceRecScreen from "../screens/VoiceRecScreen";
 import AddItemOptionsScreen from "../screens/AddItemOptionsScreen";
 import BarcodeScannerScreen from "../screens/BarcodeScannerScreen";
+import NovoItemScreen from "../screens/ManualAddScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -34,6 +35,7 @@ export default function RootNavigator() {
         <Stack.Screen name="VoiceRec" component={VoiceRecScreen} />
         <Stack.Screen name="AddItemOptions" component={AddItemOptionsScreen} />
         <Stack.Screen name="BarcodeScannerScreen" component={BarcodeScannerScreen} options={{ headerShown: false }}/>
+        <Stack.Screen name="NovoItemScreen" component={NovoItemScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
