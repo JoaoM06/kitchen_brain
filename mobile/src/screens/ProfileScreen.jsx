@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
-import FooterNav from '../components/FooterNav'; // 👈 import da barra de navegação
+import FooterNav from "../components/FooterNav";
+import SafeScreen from "../components/SafeScreen"; 
 
 const listaReceitas = [
   {
@@ -8,31 +9,43 @@ const listaReceitas = [
     titulo: 'Bife a Parmegiana',
     tempo: 'Pá-Pum',
     porcoes: 'Até 2 porções',
-    imagem:
-      'https://media.istockphoto.com/id/1147544807/vector/thumbnail-image-vector-graphic.jpg?s=612x612&w=0&k=20&c=rnCKVbdxqkjlcs3xH87-9gocETqpspHFXu5dIGB4wuM=',
+    imagem: 'https://media.istockphoto.com/id/1147544807/vector/thumbnail-image-vector-graphic.jpg?s=612x612&w=0&k=20&c=rnCKVbdxqkjlcs3xH87-9gocETqpspHFXu5dIGB4wuM=',
   },
   {
     id: '2',
     titulo: 'Biscoito champanhe caseiro',
     tempo: 'Até 1h',
     porcoes: '30 unidades',
-    imagem:
-      'https://media.istockphoto.com/id/1147544807/vector/thumbnail-image-vector-graphic.jpg?s=612x612&w=0&k=20&c=rnCKVbdxqkjlcs3xH87-9gocETqpspHFXu5dIGB4wuM=',
+    imagem: 'https://media.istockphoto.com/id/1147544807/vector/thumbnail-image-vector-graphic.jpg?s=612x612&w=0&k=20&c=rnCKVbdxqkjlcs3xH87-9gocETqpspHFXu5dIGB4wuM=',
   },
   {
     id: '3',
     titulo: 'Sopa de espinafre',
     tempo: 'Pá-Pum',
     porcoes: 'Até 4 porções',
-    imagem:
-      'https://media.istockphoto.com/id/1147544807/vector/thumbnail-image-vector-graphic.jpg?s=612x612&w=0&k=20&c=rnCKVbdxqkjlcs3xH87-9gocETqpspHFXu5dIGB4wuM=',
+    imagem: 'https://media.istockphoto.com/id/1147544807/vector/thumbnail-image-vector-graphic.jpg?s=612x612&w=0&k=20&c=rnCKVbdxqkjlcs3xH87-9gocETqpspHFXu5dIGB4wuM=',
   },
 ];
 
-export default function PerfilScreen({ navigation }) {
+const listaPostagens = [
+  {
+    id: '1',
+    titulo: 'Meu jantar de ontem 🍝',
+    descricao: 'Tentei fazer a receita de macarrão caseiro e deu super certo!',
+    imagem: 'https://media.istockphoto.com/id/1316145933/vector/food-photo-icon.jpg?s=612x612&w=0&k=20&c=cHrTnMS6rcchR5RrPcy3bcFMfRr2yNjwSPSBa7Yoc-Q=',
+  },
+  {
+    id: '2',
+    titulo: 'Dica rápida',
+    descricao: 'Sempre aqueça a frigideira antes de colocar o óleo ',
+    imagem: 'https://media.istockphoto.com/id/1316145933/vector/food-photo-icon.jpg?s=612x612&w=0&k=20&c=cHrTnMS6rcchR5RrPcy3bcFMfRr2yNjwSPSBa7Yoc-Q=',
+  },
+];
+
+export default function ProfileScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('Receitas');
 
-  const renderItem = ({ item }) => (
+  const renderReceita = ({ item }) => (
     <View style={styles.item}>
       <Image source={{ uri: item.imagem }} style={styles.itemImage} />
       <View style={{ flex: 1, marginLeft: 10 }}>
@@ -44,15 +57,25 @@ export default function PerfilScreen({ navigation }) {
     </View>
   );
 
+  const renderPostagem = ({ item }) => (
+    <View style={styles.postItem}>
+      <Image source={{ uri: item.imagem }} style={styles.postImage} />
+      <View style={{ flex: 1, marginLeft: 10 }}>
+        <Text style={styles.postTitulo}>{item.titulo}</Text>
+        <Text style={styles.postDescricao}>{item.descricao}</Text>
+      </View>
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
+    <SafeScreen> 
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity>
           <Text style={styles.headerButton}>Editar</Text>
         </TouchableOpacity>
         <Text style={styles.headerText}>Perfil</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Config")}>
+        <TouchableOpacity onPress={() => navigation.navigate("Configs")}>
           <Text style={styles.headerButton}>Config</Text>
         </TouchableOpacity>
       </View>
@@ -97,23 +120,33 @@ export default function PerfilScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* LISTA DE RECEITAS */}
-      <FlatList
-        data={listaReceitas}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        style={{ flex: 1, width: '100%' }}
-        contentContainerStyle={{ paddingHorizontal: 20 }}
-      />
+      {/* CONTEÚDO DINÂMICO */}
+      {activeTab === 'Receitas' ? (
+        <FlatList
+          data={listaReceitas}
+          keyExtractor={(item) => item.id}
+          renderItem={renderReceita}
+          style={{ width: '100%' }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 90 }} 
+        />
+      ) : (
+        <FlatList
+          data={listaPostagens}
+          keyExtractor={(item) => item.id}
+          renderItem={renderPostagem}
+          style={{ width: '100%' }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 90 }} 
+        />
+      )}
 
-      {/* BARRA INFERIOR */}
-      <FooterNav active="Profile" onNavigate={navigation.replace} />
-    </View>
+      {/* NAVBAR */}
+      <FooterNav active="Profile" onNavigate={navigation.replace} /> 
+    </SafeScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff'},
+  container: { flex: 1, backgroundColor: '#fff', alignItems: 'center' },
 
   header: {
     width: '100%',
@@ -125,17 +158,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 10,
   },
-  headerText: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
-  headerButton: { color: '#fff', fontSize: 14, marginLeft: 30 },
+  headerText: { color: '#fff', fontSize: 22, fontWeight: 'bold' , marginBottom: 10},
+  headerButton: { color: '#fff', fontSize: 14, marginLeft: 5 },
 
-  profile: { alignItems: 'center', marginTop: -20, paddingHorizontal: 20 },
+  profile: { alignItems: 'center', marginTop: -20, paddingHorizontal: 20 ,marginBottom: 10},
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
     borderColor: '#fff',
-    marginTop: 20,
+    marginTop: -2,
   },
   name: { fontSize: 22, fontWeight: 'bold', marginTop: 10 },
   bio: { textAlign: 'center', color: '#999', marginTop: 5 },
@@ -166,4 +199,15 @@ const styles = StyleSheet.create({
   itemTitulo: { fontWeight: 'bold', fontSize: 16 },
   itemSub: { color: '#666', fontSize: 12 },
   bookmark: { width: 20, height: 20, backgroundColor: '#69a66a', borderRadius: 4 },
+
+  postItem: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    alignItems: 'center',
+  },
+  postImage: { width: 60, height: 60, borderRadius: 8, backgroundColor: '#ddd' },
+  postTitulo: { fontWeight: 'bold', fontSize: 16 },
+  postDescricao: { color: '#666', fontSize: 13, marginTop: 3 },
 });
