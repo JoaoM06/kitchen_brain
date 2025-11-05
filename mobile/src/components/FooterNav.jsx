@@ -6,7 +6,7 @@ export default function FooterNav({ active, onNavigate }) {
   const tabs = [
     { key: "Recipes", icon: "restaurant-outline" },
     { key: "Stock", icon: "cube-outline" },
-    { key: "Insights", icon: "stats-chart-outline" },
+    { key: "CardapioBotScreen", icon: "stats-chart-outline" },
     { key: "Profile",   icon: "person-outline" },
   ];
 
