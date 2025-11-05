@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel
 from datetime import date
 
 class ItemBase(BaseModel):
