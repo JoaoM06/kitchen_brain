@@ -206,7 +206,6 @@ Documentação CardápioBotScreen
 
 1. Importações
 
-![importações](./mobile/imagens/importsCard.png)
 
 ```
 React, useState, useEffect, useRef: Hooks essenciais do React para estado, efeitos colaterais e referências.
