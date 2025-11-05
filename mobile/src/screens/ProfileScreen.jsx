@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
-import FooterNav from '../components/FooterNav'; // 👈 import da barra de navegação
+import FooterNav from "../components/FooterNav";
 
 const listaReceitas = [
   {
@@ -105,9 +105,8 @@ export default function PerfilScreen({ navigation }) {
         style={{ flex: 1, width: '100%' }}
         contentContainerStyle={{ paddingHorizontal: 20 }}
       />
-
-      {/* BARRA INFERIOR */}
-      <FooterNav active="Profile" onNavigate={navigation.replace} />
+      {/* NAVBAR */}
+      <FooterNav active="Profile" onNavigate={navigation.replace}/>
     </View>
   );
 }
