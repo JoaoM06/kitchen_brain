@@ -1,4 +1,4 @@
-import React from "react";
+import React from "react"; 
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { colors } from "../theme/colors";
 import SafeScreen from "../components/SafeScreen";
