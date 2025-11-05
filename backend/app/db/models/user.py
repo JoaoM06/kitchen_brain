@@ -3,8 +3,8 @@ from datetime import datetime
 from typing import Optional, List
 import uuid
 
-from sqlalchemy import String, Boolean, DateTime, func
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY, UUID
+from sqlalchemy import String, Boolean, DateTime, func, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -26,13 +26,10 @@ class User(Base):
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    preferencias: Mapped[Optional[List[str]]] = mapped_column(
-        ARRAY(String(100)), nullable=True, default=None
-    )
-    alergias: Mapped[Optional[List[str]]] = mapped_column(
-        ARRAY(String(100)), nullable=True, default=None
-    )
-    restricoes_alimentares: Mapped[Optional[List[str]]] = mapped_column(
-        ARRAY(String(100)), nullable=True, default=None
-    )
-    bio: Mapped[str] = mapped_column(String(255), nullable=True, default=None)
+
+ 
+    preferencias: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True, default=None)
+    alergias: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True, default=None)
+    restricoes_alimentares: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True, default=None)
+
+    bio: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, default=None)

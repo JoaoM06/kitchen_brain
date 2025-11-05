@@ -5,7 +5,8 @@ from app.api.routes.profile import router as profile_router
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import engine
-
+from app.api.routes.stock import router as stock_router
+from app.api.routes.lista_compras import router as lista_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -26,3 +27,5 @@ def health():
 
 app.include_router(auth_router)
 app.include_router(profile_router)
+app.include_router(stock_router)
+app.include_router(lista_router)

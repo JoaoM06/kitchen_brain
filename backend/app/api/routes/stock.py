@@ -5,7 +5,7 @@ from app.db.models.user import User
 from sqlalchemy.orm import Session
 from app.db.models.items import Item
 from app.schemas.itensEstoque import ItemCreate, ItemUpdate
-from schemas.itensEstoque import ItemOut
+from app.schemas.itensEstoque import ItemOut
 
 def get_item(db: Session, item_id: int):
     return db.query(Item).filter(Item.id == item_id).first()
