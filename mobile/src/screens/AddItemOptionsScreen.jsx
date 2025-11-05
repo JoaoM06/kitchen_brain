@@ -17,7 +17,7 @@ export default function AddItemOptionsScreen({ navigation }) {
         <OptionButton
           icon={<MaterialCommunityIcons name="pencil-outline" size={22} color="#fff" />}
           title="Adicionar item manualmente"
-          onPress={() => {/* navegue para o formulário manual */}}
+          onPress={() => {navigation.navigate("NovoItemScreen")}}
         />
         <OptionButton
           icon={<Ionicons name="scan-outline" size={22} color="#fff" />}
@@ -27,7 +27,7 @@ export default function AddItemOptionsScreen({ navigation }) {
         <OptionButton
           icon={<Ionicons name="mic-outline" size={22} color="#fff" />}
           title="Adicionar item por voz"
-          onPress={() => {/* navegue para a tela de voz */}}
+          onPress={() => {navigation.navigate("VoiceRec")}}
         />
       </ScrollView>
     </SafeScreen>
@@ -44,7 +44,13 @@ function OptionButton({ icon, title, onPress }) {
 }
 
 const styles = StyleSheet.create({
-  container: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32, backgroundColor: colors.background, flexGrow: 1 },
+  container: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
+    backgroundColor: colors.background,
+    flexGrow: 1,
+  },
   back: { color: colors.primary, fontSize: 16, fontWeight: "600" },
 
   btn: {
