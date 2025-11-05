@@ -156,7 +156,7 @@ export default function NovoItemScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <FooterNav />
+      <FooterNav active="NovoItemScreen" onNavigate={navigation.replace} /> 
     </SafeScreen>
   );
 }
