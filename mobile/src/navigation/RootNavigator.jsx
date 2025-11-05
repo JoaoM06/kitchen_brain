@@ -8,6 +8,8 @@ import RecipesScreen from "../screens/RecipesScreen";
 import StockScreen from "../screens/StockScreen";
 import AddItemOptionsScreen from "../screens/AddItemOptionsScreen";
 import BarcodeScannerScreen from "../screens/BarcodeScannerScreen";
+import CardapioBotScreen from "../screens/CardapioBotScreen";
+import MainTabs from "./MainTabs";
 
 const Stack = createNativeStackNavigator();
 
@@ -22,10 +24,10 @@ export default function RootNavigator() {
         
         {/* Rotas privadas */}
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-        <Stack.Screen name="Recipes" component={RecipesScreen} />
-        <Stack.Screen name="Stock" component={StockScreen} />
+        <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="AddItemOptions" component={AddItemOptionsScreen} />
         <Stack.Screen name="BarcodeScannerScreen" component={BarcodeScannerScreen} options={{ headerShown: false }}/>
+        <Stack.Screen name="Insights" component={CardapioBotScreen} options={{ headerShown: true, title: "CardapioBot" }}/>
       </Stack.Navigator>
     </NavigationContainer>
   );
