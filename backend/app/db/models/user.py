@@ -27,7 +27,7 @@ class User(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
-    # 🔁 Agora com JSON — funciona tanto no SQLite quanto no PostgreSQL
+ 
     preferencias: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True, default=None)
     alergias: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True, default=None)
     restricoes_alimentares: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True, default=None)
