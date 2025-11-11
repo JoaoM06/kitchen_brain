@@ -1,11 +1,18 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query, Depends
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import Optional, Literal, List
 from faster_whisper import WhisperModel
-from app.core.config import settings
 from google import genai
 import tempfile, shutil, os
+from unidecode import unidecode
 import os
+import re
+
+from app.core.config import settings
+from app.db.session import get_db
+from app.db.models.product import ProdutoGenerico
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 
@@ -199,3 +206,113 @@ def format_text(body: TextIn):
         return response.parsed
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Falha ao formatar texto: {e}")
+    
+
+#Match de produtos genéricos
+class ProductCandidate(BaseModel):
+    id: str
+    name: str
+    score: float
+
+class MatchResult(BaseModel):
+    source_text: str
+    product_name: str
+    product_normalized: Optional[str]
+    candidates: List[ProductCandidate]
+    suggested_action: Literal["select_candidate", "create_new"]
+
+_STOPWORDS = {"de","do","da","dos","das","e","em","para","no","na","a","o","um","uma","uns","umas","com"}
+
+def normalize_name(s: str) -> str:
+    s = unidecode(s or "").lower()
+    s = re.sub(r"[^a-z0-9\s]", " ", s)
+    parts = [p for p in s.split() if p and p not in _STOPWORDS]
+    return " ".join(parts)
+
+TRIGRAM_MIN = 0.25
+MAX_RESULTS = 5
+
+def _query_candidates(
+    db: Session,
+    raw_name: str,
+    normalized_hint: Optional[str],
+    limit: int = MAX_RESULTS
+) -> List[ProductCandidate]:
+    norm = normalize_name(normalized_hint or raw_name or "")
+    if not norm:
+        return []
+
+    try:
+        rows = (
+            db.query(
+                ProdutoGenerico.id,
+                ProdutoGenerico.nome,
+                ProdutoGenerico.nome_normalizado,
+                func.similarity(ProdutoGenerico.nome_normalizado, norm).label("sim")
+            )
+            .filter(func.similarity(ProdutoGenerico.nome_normalizado, norm) >= TRIGRAM_MIN)
+            .order_by(func.similarity(ProdutoGenerico.nome_normalizado, norm).desc())
+            .limit(limit)
+            .all()
+        )
+
+        results = [
+            ProductCandidate(
+                id=str(rid),
+                name=display_name,
+                score=float(sim)
+            )
+            for rid, display_name, _, sim in rows
+            if sim > 0.0
+        ]
+
+        return results
+
+    except Exception as e:
+        print("Erro no uso do pg_trgm:", e)
+        all_rows = (
+            db.query(ProdutoGenerico.id, ProdutoGenerico.nome, ProdutoGenerico.nome_normalizado)
+            .limit(1000)
+            .all()
+        )
+        def simple_score(n):
+            if not n:
+                return 0
+            terms = norm.split()
+            return sum(t in n for t in terms) / len(terms)
+
+        scored = [(rid, disp, simple_score(n)) for rid, disp, n in all_rows]
+        scored = [r for r in scored if r[2] > 0.0]
+        scored.sort(key=lambda x: x[2], reverse=True)
+        return [ProductCandidate(id=str(rid), name=disp, score=s) for rid, disp, s in scored[:limit]]
+    
+@router.post("/match-items", response_model=List[MatchResult])
+def match_items(items: List[StructuredResponse], db: Session = Depends(get_db)):
+    results: List[MatchResult] = []
+
+    for it in items:
+        raw = it.product_name.strip() if it.product_name else ""
+        if not raw:
+            results.append(MatchResult(
+                source_text=it.source_text,
+                product_name=it.product_name or "",
+                product_normalized=it.product_normalized,
+                candidates=[],
+                suggested_action="create_new"
+            ))
+            continue
+
+        cands = _query_candidates(db, raw_name=raw, normalized_hint=it.product_normalized)
+        suggested_action = "select_candidate"
+        if not cands or (cands and cands[0].score < 0.35):
+            suggested_action = "create_new"
+
+        results.append(MatchResult(
+            source_text=it.source_text,
+            product_name=it.product_name,
+            product_normalized=it.product_normalized,
+            candidates=cands,
+            suggested_action=suggested_action
+        ))
+
+    return results
