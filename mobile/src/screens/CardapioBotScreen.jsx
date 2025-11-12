@@ -457,6 +457,10 @@ export default function CardapioBotScreen({ navigation }) {
   const requestContext = useMemo(
     () => ({
       userProfile: PROFILE_SNAPSHOT,
+      conversationHistory: messages
+        .filter((m) => m.text && !m.isTyping)
+        .slice(-6)
+        .map((m) => ({ role: m.role, text: m.text })),
       planner: {
         period: selectedRange,
         meals: selectedMeals,
@@ -488,7 +492,7 @@ export default function CardapioBotScreen({ navigation }) {
           }
         : null,
     }),
-    [selectedRange, selectedMeals, dietTags, allergyList, servings, budget, timePerMeal, selectedEquipment, selectedOrigins, prioritized, goal, macroTarget, contextNotes, lastMenuChip]
+    [messages, selectedRange, selectedMeals, dietTags, allergyList, servings, budget, timePerMeal, selectedEquipment, selectedOrigins, prioritized, goal, macroTarget, contextNotes, lastMenuChip]
   );
 
   const canSend = text.trim().length > 0 && !loading;
@@ -546,7 +550,7 @@ export default function CardapioBotScreen({ navigation }) {
 
     try {
       const reply = await callGemini(buildPrompt(content, requestContext));
-      await finishWithParsedMenu(parseMenuChip(reply));
+      await finishWithParsedMenu(parseMenuChip(reply), { userText: content });
     } catch (e) {
       console.warn("CardapioBot", e);
       if (shouldUseDemoCardapio(e)) {
@@ -808,8 +812,8 @@ export default function CardapioBotScreen({ navigation }) {
 
     let menuChipToUse = parsed?.menuChip;
     let manualNotes = [];
-    if (isFallback && userText && menuChipToUse) {
-      const adjusted = applyFallbackOverrides(menuChipToUse, userText);
+    if (userText && menuChipToUse) {
+      const adjusted = applyUserOverrides(menuChipToUse, userText, { force: isFallback });
       menuChipToUse = adjusted.menuChip;
       manualNotes = adjusted.notes;
     }
@@ -1183,6 +1187,7 @@ Interpretar o pedido do usuário e:
 - Permita **substituições** (vegano/vegetariano/halal/kosher/sem lactose/sem glúten/low-FODMAP/diabetes/hipertensão/keto/low-carb/high-protein, etc.).
 - Evite ingredientes proibidos e **garanta ausência total** dos alergênicos indicados.
 - **Nunca** entregue um cardápio parcial: se o período solicitado cobrir N dias, preencha \`menu.dias\` com todos os dias do intervalo (Seg-Dom ou o período informado). Se não for possível gerar o período completo, explique ao usuário e peça dados extras em vez de entregar algo incompleto.
+- Quando o usuário pedir **alterações específicas** (ex.: "trocar o café da manhã por pão de batata" ou "remover camarão do jantar"), utilize o histórico recente em \`ctx.conversationHistory\` para entender o contexto e **aplique as mudanças em todo o cardápio**. Repita essas mudanças no texto e no JSON, confirmando explicitamente o que foi ajustado.
 - Opcionalmente, faça *batch cooking* (adiantando preparos para a semana) quando fizer sentido.
 - Nutrição: quando pedido, informe **kcal** e **macros** (carbs_g, protein_g, fat_g) por refeição e por dia (estimativas).
 
@@ -1311,7 +1316,7 @@ async function generateMenuPdf(menuChip) {
   return { uri: dest, name: filename };
 }
 
-function applyFallbackOverrides(menuChip, userText) {
+function applyUserOverrides(menuChip, userText, { force = false } = {}) {
   const text = userText?.trim();
   if (!text) return { menuChip, notes: [] };
 
@@ -1319,11 +1324,11 @@ function applyFallbackOverrides(menuChip, userText) {
   const notes = [];
   const replacements = [];
   const rules = [
-    { label: "Café da manhã", triggers: ["café da manhã", "cafe da manha", "café", "cafe"] },
+    { label: "Café da manhã", triggers: ["café da manhã", "cafe da manha", "café", "cafe", "manhã"] },
     { label: "Almoço", triggers: ["almoço", "almoco"] },
-    { label: "Lanche", triggers: ["lanche", "lanche da tarde"] },
-    { label: "Jantar", triggers: ["jantar"] },
-    { label: "Ceia", triggers: ["ceia"] },
+    { label: "Lanche", triggers: ["lanche", "lanche da tarde", "lanche tarde"] },
+    { label: "Jantar", triggers: ["jantar", "noite"] },
+    { label: "Ceia", triggers: ["ceia", "ceia leve"] },
   ];
 
   rules.forEach((rule) => {
@@ -1333,7 +1338,7 @@ function applyFallbackOverrides(menuChip, userText) {
     }
   });
 
-  const replaced = replaceMeals(clone.data, replacements);
+  const replaced = replaceMeals(clone.data, replacements, { force });
   replaced.forEach((item) => notes.push(item));
 
   if (notes.length) {
@@ -1345,13 +1350,20 @@ function applyFallbackOverrides(menuChip, userText) {
 
 function extractMealReplacement(text, triggers) {
   const escaped = triggers.map(escapeRegExp).join("|");
-  const regex = new RegExp(`(?:${escaped})[^.\n]*?(?:para|com|:)?\s*([^.,;\n]+)`, "i");
-  const match = text.match(regex);
-  if (match && match[1]) return match[1].trim();
+  const patterns = [
+    `(?:troque|substitua|mude|altere)\s+(?:o|a)?\s*(?:${escaped})[^.\n]*?(?:por|para|com)\s+([^.,;\n]+)` ,
+    `(?:${escaped})[^.\n]*?(?:por|para|com|:)\s+([^.,;\n]+)` ,
+  ];
+
+  for (const pattern of patterns) {
+    const regex = new RegExp(pattern, "i");
+    const match = text.match(regex);
+    if (match && match[1]) return match[1].trim();
+  }
   return null;
 }
 
-function replaceMeals(data, replacements) {
+function replaceMeals(data, replacements, { force = false } = {}) {
   if (!data?.menu?.dias || replacements.length === 0) return [];
   const logs = [];
 
@@ -1375,6 +1387,10 @@ function replaceMeals(data, replacements) {
           meal.kcal = null;
           const logLabel = `${label} → ${replacement}`;
           if (!logs.includes(logLabel)) logs.push(logLabel);
+        } else if (force && target.includes("café") && mealName.includes("café")) {
+          meal.itens = [replacement];
+          meal.observacoes = "Pedido manual";
+          if (!logs.includes(`${label} → ${replacement}`)) logs.push(`${label} → ${replacement}`);
         }
       });
     });
