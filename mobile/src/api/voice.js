@@ -23,3 +23,13 @@ export async function transcribeAudio({ uri, language = "pt", filename, mime }) 
   });
   return res.data;
 }
+
+export async function parseText({ text }) {
+  const res = await api.post("/voice/parse-text", { text });
+  return res.data;
+}
+
+export async function matchItems({ items }) {
+  const res = await api.post("/voice/match-items", items);
+  return res.data;
+}

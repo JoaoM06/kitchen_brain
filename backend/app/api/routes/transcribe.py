@@ -212,6 +212,9 @@ def format_text(body: TextIn):
 class ProductCandidate(BaseModel):
     id: str
     name: str
+    normalized: Optional[str] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
     score: float
 
 class MatchResult(BaseModel):
@@ -232,6 +235,10 @@ def normalize_name(s: str) -> str:
 TRIGRAM_MIN = 0.25
 MAX_RESULTS = 5
 
+TRIGRAM_MIN = 0.25
+MAX_RESULTS = 5
+MIN_CAND_SCORE = 0.20
+
 def _query_candidates(
     db: Session,
     raw_name: str,
@@ -248,6 +255,8 @@ def _query_candidates(
                 ProdutoGenerico.id,
                 ProdutoGenerico.nome,
                 ProdutoGenerico.nome_normalizado,
+                ProdutoGenerico.categoria,
+                ProdutoGenerico.url_imagem,
                 func.similarity(ProdutoGenerico.nome_normalizado, norm).label("sim")
             )
             .filter(func.similarity(ProdutoGenerico.nome_normalizado, norm) >= TRIGRAM_MIN)
@@ -256,35 +265,58 @@ def _query_candidates(
             .all()
         )
 
-        results = [
+        return [
             ProductCandidate(
                 id=str(rid),
                 name=display_name,
+                normalized=norm_name,
+                category=cat,
+                image_url=img,
                 score=float(sim)
             )
-            for rid, display_name, _, sim in rows
-            if sim > 0.0
+            for rid, display_name, norm_name, cat, img, sim in rows
+            if float(sim) >= MIN_CAND_SCORE
         ]
 
-        return results
-
-    except Exception as e:
-        print("Erro no uso do pg_trgm:", e)
+    except Exception:
         all_rows = (
-            db.query(ProdutoGenerico.id, ProdutoGenerico.nome, ProdutoGenerico.nome_normalizado)
-            .limit(1000)
+            db.query(
+                ProdutoGenerico.id,
+                ProdutoGenerico.nome,
+                ProdutoGenerico.nome_normalizado,
+                ProdutoGenerico.categoria,
+                ProdutoGenerico.url_imagem,
+            )
+            .limit(2000)
             .all()
         )
-        def simple_score(n):
-            if not n:
-                return 0
-            terms = norm.split()
-            return sum(t in n for t in terms) / len(terms)
+        terms = norm.split()
 
-        scored = [(rid, disp, simple_score(n)) for rid, disp, n in all_rows]
-        scored = [r for r in scored if r[2] > 0.0]
-        scored.sort(key=lambda x: x[2], reverse=True)
-        return [ProductCandidate(id=str(rid), name=disp, score=s) for rid, disp, s in scored[:limit]]
+        def simple_score(n: Optional[str]) -> float:
+            if not n or not terms:
+                return 0.0
+            hits = sum(1 for t in terms if t in n)
+            return hits / len(terms)
+
+        scored = [
+            (rid, disp, norm_name, cat, img, simple_score(norm_name))
+            for rid, disp, norm_name, cat, img in all_rows
+        ]
+        scored = [r for r in scored if r[5] >= MIN_CAND_SCORE]
+        scored.sort(key=lambda x: x[5], reverse=True)
+        top = scored[:limit]
+
+        return [
+            ProductCandidate(
+                id=str(rid),
+                name=disp,
+                normalized=norm_name,
+                category=cat,
+                image_url=img,
+                score=float(s)
+            )
+            for rid, disp, norm_name, cat, img, s in top
+        ]
     
 @router.post("/match-items", response_model=List[MatchResult])
 def match_items(items: List[StructuredResponse], db: Session = Depends(get_db)):

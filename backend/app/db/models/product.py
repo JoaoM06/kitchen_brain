@@ -18,6 +18,9 @@ class ProdutoGenerico(Base):
     produtos: Mapped[List["Produto"]] = relationship(
         "Produto", back_populates="generico", cascade="all, delete-orphan"
     )
+    itens_estoque: Mapped[List["ItemEstoque"]] = relationship(
+        "ItemEstoque", back_populates="produto_generico"
+    )
 
 class Produto(Base):
     __tablename__ = "produtos"
@@ -29,9 +32,6 @@ class Produto(Base):
 
     codigos: Mapped[list["CodigoBarras"]] = relationship(
         back_populates="produto", cascade="all, delete-orphan"
-    )
-    itens: Mapped[list["ItemEstoque"]] = relationship(  # definido em storage.py
-        back_populates="produto"
     )
     id_generico: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

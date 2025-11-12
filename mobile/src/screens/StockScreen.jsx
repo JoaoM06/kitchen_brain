@@ -1,37 +1,74 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import React, { useEffect, useState, useCallback } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Alert } from "react-native";
 import { colors } from "../theme/colors";
 import SafeScreen from "../components/SafeScreen";
 import DefaultInput from "../components/DefaultInput";
 import DefaultButton from "../components/DefaultButton";
 import FooterNav from "../components/FooterNav";
-
-const armario = [
-  { id: "a1", name: "Macarrão",   expiry: "25/12", status: "ok" },
-  { id: "a2", name: "Pão de forma", expiry: "24/10", status: "ok" },
-  { id: "a3", name: "Filé Mignon",  expiry: "05/11", status: "ok" },
-  { id: "a4", name: "Farinha Panko", expiry: "13/02", status: "ok" },
-];
-
-const geladeira = [
-  { id: "g1", name: "Ovo",         expiry: "18/10", status: "danger" },
-  { id: "g2", name: "Filé Mignon", expiry: "05/11", status: "ok" },
-  { id: "g3", name: "Leite",       expiry: "21/10", status: "ok" },
-];
+import { fetchStock } from "../api/stock";
 
 export default function StockScreen({ navigation }) {
   const [query, setQuery] = useState("");
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadData = useCallback(async (opts = {}) => {
+    try {
+      if (!opts.silent) setLoading(true);
+      const data = await fetchStock({ q: query || undefined }); // ✅ sem token aqui
+      setGroups(data?.groups || []);
+    } catch (e) {
+      console.log("fetch stock error:", e?.response?.data || e.message);
+      Alert.alert("Falha", "Não foi possível carregar o estoque.");
+    } finally {
+      if (!opts.silent) setLoading(false);
+    }
+  }, [query]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData({ silent: true });
+    setRefreshing(false);
+  };
+
+  const section = (title, items) => (
+    <>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.card}>
+        {items.map((item, idx) => (
+          <RowItem
+            key={item.id}
+            name={item.name}
+            expiry={item.expiry || "--/--"}
+            status={item.status}
+            hasDivider={idx < items.length - 1}
+          />
+        ))}
+      </View>
+    </>
+  );
 
   return (
     <SafeScreen>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+        }
+      >
         <View style={styles.header}>
           <Pressable onPress={() => navigation?.goBack?.()}>
             <Text style={styles.headerAction}>Voltar</Text>
           </Pressable>
           <Text style={styles.headerTitle}>Estoque</Text>
-          <Pressable onPress={() => {/* TODO: filtro */}}>
-            <Text style={styles.headerAction}>Filtro</Text>
+          <Pressable onPress={() => loadData()}>
+            <Text style={styles.headerAction}>{loading ? "..." : "Atualizar"}</Text>
           </Pressable>
         </View>
 
@@ -41,6 +78,7 @@ export default function StockScreen({ navigation }) {
           placeholder="Busca"
           style={styles.search}
           returnKeyType="search"
+          onSubmitEditing={() => loadData()}
         />
 
         <DefaultButton
@@ -51,35 +89,17 @@ export default function StockScreen({ navigation }) {
           Adicionar item
         </DefaultButton>
 
-        <Text style={styles.sectionTitle}>Armário</Text>
-        <View style={styles.card}>
-          {armario
-            .filter(i => i.name.toLowerCase().includes(query.toLowerCase()))
-            .map((item, idx) => (
-              <RowItem
-                key={item.id}
-                name={item.name}
-                expiry={item.expiry}
-                status={item.status}
-                hasDivider={idx < armario.length - 1}
-              />
-          ))}
-        </View>
+        {groups.length === 0 && (
+          <Text style={{ color: colors.mutedText, textAlign: "center", marginTop: 12 }}>
+            {loading ? "Carregando..." : "Nenhum item encontrado"}
+          </Text>
+        )}
 
-        <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Geladeira</Text>
-        <View style={styles.card}>
-          {geladeira
-            .filter(i => i.name.toLowerCase().includes(query.toLowerCase()))
-            .map((item, idx) => (
-              <RowItem
-                key={item.id}
-                name={item.name}
-                expiry={item.expiry}
-                status={item.status}
-                hasDivider={idx < geladeira.length - 1}
-              />
-          ))}
-        </View>
+        {groups.map((g, idx) => (
+          <View key={`${g.location}-${idx}`} style={{ marginBottom: 18 }}>
+            {section(g.location, g.items)}
+          </View>
+        ))}
 
         <View style={{ height: 90 }} />
       </ScrollView>
@@ -90,8 +110,8 @@ export default function StockScreen({ navigation }) {
 }
 
 function RowItem({ name, expiry, status, hasDivider }) {
-  const dotColor = status === "danger" ? "#EF4444" : colors.primary;
-  const expiryColor = status === "danger" ? "#EF4444" : "#6B7280";
+  const dotColor = status === "danger" ? "#EF4444" : status === "warn" ? "#F59E0B" : colors.primary;
+  const expiryColor = status === "danger" ? "#EF4444" : status === "warn" ? "#F59E0B" : "#6B7280";
   return (
     <>
       <View style={rowStyles.row}>
