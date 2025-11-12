@@ -5,6 +5,7 @@ import LoginScreen from "../screens/LoginScreen";
 import SignupScreen from "../screens/SignupScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
 import RecipesScreen from "../screens/RecipesScreen";
+import RecipeDetailScreen from "../screens/RecipeDetailScreen";
 import StockScreen from "../screens/StockScreen";
 import ConfigsScreen from "../screens/ConfigsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
@@ -29,6 +30,7 @@ export default function RootNavigator() {
         {/* Rotas privadas */}
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="Recipes" component={RecipesScreen} />
+        <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
         <Stack.Screen name="Stock" component={StockScreen} />
         <Stack.Screen name="Config" component={ConfigsScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />

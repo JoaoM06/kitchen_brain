@@ -22,6 +22,7 @@ import { BASE_URL } from "../api/client";
 // ====== Ajuste estes valores conforme seu app ======
 const AUTH_TOKEN_KEY = "auth_token";         // onde você salva o JWT
 const DEVICE_ID_KEY  = "device_id";          // onde guardamos o id do device registrado no backend
+const IS_EXPO_GO = Constants.appOwnership === "expo";
 // ===================================================
 
 // Helper para mapear status do SO -> nosso backend
@@ -131,8 +132,12 @@ export default function Configs() {
         payload.p_location = mapPerm(loc?.status);
       }
       if (wants.includes("notifications")) {
-        const noti = await Notifications.getPermissionsAsync().catch(() => null);
-        payload.p_notifications = mapPerm(noti?.status);
+        if (IS_EXPO_GO) {
+          payload.p_notifications = "unsupported";
+        } else {
+          const noti = await Notifications.getPermissionsAsync().catch(() => null);
+          payload.p_notifications = mapPerm(noti?.status);
+        }
       }
       if (wants.includes("camera")) {
         const cam = await Camera.getCameraPermissionsAsync().catch(() => null);
@@ -213,10 +218,19 @@ export default function Configs() {
         }
 
         if (kind === "notifications") {
+          if (IS_EXPO_GO) {
+            Alert.alert(
+              "Notificações",
+              "O Expo Go não oferece notificações push. Gere um build de desenvolvimento para ativar este recurso."
+            );
+            setPerm((p) => ({ ...p, p_notifications: "unsupported" }));
+            snapshotAndSendDevicePermissions(devId, "notifications");
+            return;
+          }
+
           const { status } = await Notifications.requestPermissionsAsync();
           setPerm((p) => ({ ...p, p_notifications: mapPerm(status) }));
           if (status === "granted") {
-            // obtém Expo Push Token e atualiza o device existente (sem re-registrar)
             try {
               const projId =
                 Constants?.expoConfig?.extra?.eas?.projectId ||
@@ -268,7 +282,9 @@ export default function Configs() {
       {
         key: "allow_notifications",
         title: "Notificações",
-        desc: "Permite ao app enviar alertas de ofertas e itens no estoque.",
+        desc: IS_EXPO_GO
+          ? "Disponível apenas em builds de desenvolvimento/client próprio."
+          : "Permite ao app enviar alertas de ofertas e itens no estoque.",
         icon: <Ionicons name="notifications-outline" size={28} color="black" />,
         permKey: "p_notifications",
         onRequest: () => requestAndSync("notifications"),
@@ -341,10 +357,10 @@ export default function Configs() {
                 </Text>
               )}
             </View>
-            <Switch value={enabled} onValueChange={toggle} />
-          </View>
-        );
-      })}
+            <Switch value={enabled} onValueChange={toggle} disabled={row.key === "allow_notifications" && IS_EXPO_GO} />
+        </View>
+      );
+    })}
 
       <View style={{ height: 24 }} />
     </ScrollView>
