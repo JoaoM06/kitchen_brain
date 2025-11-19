@@ -275,3 +275,95 @@ const headerHeight = useHeaderHeight(); // altura real do header para offset do 
 - headerHeight: usado no KeyboardAvoidingView para calcular offset.
 
 
+CardapioBot: Seu Assistente de Planejamento Culinário
+
+O CardapioBot é uma aplicação móvel desenvolvida em React Native que simplifica o planejamento de refeições. Ele atua como um planejador inteligente, organizando cardápios semanais ou diários completos com base nas suas necessidades, restrições e inventário de cozinha.
+
+**Funcionalidades em Destaque**
+
+* Planejamento Personalizado e Contextual: Gera planos de refeições altamente detalhados, considerando um conjunto abrangente de informações do usuário:
+* Restrições Alimentares: Estilo dietético (`Sem lactose`, `Flexitariana`, etc.) e lista de alergias/exclusões.
+* Metas Nutricionais: Atende a objetivos específicos de macronutrientes e calorias.
+* Inventário de Cozinha: Prioriza o uso de itens disponíveis na despensa e produtos com vencimento próximo, otimizando o estoque e reduzindo o desperdício.
+* Logística: Considera tempo máximo de preparo, equipamentos de cozinha disponíveis (Air fryer, Panela de pressão, etc.) e culinárias desejadas.
+* Interface Interativa: Utiliza uma interface de chat para receber pedidos de forma conversacional e intuitiva, com atalhos para solicitações rápidas (`Batch cooking`, `Despensa primeiro`).
+* Relatórios Estruturados: O resultado é um cardápio completo, apresentado em um "chip" interativo que inclui:
+    Sugestões de Refeições por dia.
+    Estimativas Nutricionais (Kcal, Proteína, Carboidratos, Gordura).
+    Plano de *Batch Cooking* (preparos antecipados).
+    Lista de Compras detalhada.
+    Estimativa de Custo.
+Gerador de PDF: Converte o cardápio gerado em um arquivo PDF formatado para fácil visualização, impressão e compartilhamento.
+Ajustes Rápidos: Permite ao usuário solicitar alterações pontuais (ex: "Trocar o almoço de terça por sopa") e as aplica no cardápio de forma automática.
+Persistência de Contexto: Mantém as preferências de planejamento e o último cardápio gerado em exibição para referência e consistência.
+
+**Estrutura Técnica**
+
+O CardapioBot é construído em React Native e utiliza várias bibliotecas para suas funcionalidades:
+
+* Interface: Componentes customizados para o chat, cartões de contexto (`Section`, `InfoBadge`) e seleção de parâmetros (`Chip`).
+* Navegação e Layout: Utiliza `@react-navigation/elements` para obter a altura do cabeçalho e `KeyboardAvoidingView` para uma experiência de entrada de texto fluida.
+* Geração de Documentos: Implementa as bibliotecas `expo-print` e `expo-file-system` para a conversão do cardápio em HTML e sua exportação como PDF.
+* Compartilhamento: Utiliza `expo-sharing` para permitir que o usuário baixe ou compartilhe o PDF do cardápio gerado.
+
+O núcleo do aplicativo reside na coleta de dados do usuário (perfil e preferências), sua compilação em um contexto detalhado, e no processamento dessa informação para gerar o plano de refeições estruturado.
+
+## Documentação Detalhada da Tela CardapioBotScreen (React Native)
+
+O arquivo `CardapioBotScreen.jsx` implementa um assistente inteligente de planejamento de cardápios. A tela integra uma interface de chat com uma área de configuração de contexto que alimenta um poderoso mecanismo de geração de planos de refeição estruturados.
+
+### 1. Constantes e Dados de Contexto (Setup Inicial)
+
+| Linha(s) | Variável/Constante | Descrição | Importância |
+| :--- | :--- | :--- | :--- |
+| `L21` | `GEMINI_MODEL` | O modelo de linguagem utilizado. | Define o motor de geração de conteúdo. |
+| `L32-L37` | `PROFILE_SNAPSHOT` | Dados estáticos (simulados) do perfil do usuário: nome, estilo alimentar, alergias e metas de macros. | Fundamental para personalizar o cardápio e manter as restrições de segurança. |
+| `L48-L51` | `EXPIRING_ITEMS` | Lista de itens da despensa com vencimento próximo. | Prioriza o uso desses itens no algoritmo de planejamento para evitar desperdício. |
+| `L55-L67` | `QUICK_PROMPTS` | Objetos para atalhos de prompt, usando *placeholders* (ex: `{range}`, `{tempo}`). | Melhora a usabilidade, permitindo que o usuário envie pedidos complexos rapidamente. |
+| `L74-L359` | `MOCK_MENU_PAYLOAD`, `MOCK_MENU_RESPONSE` | JSON estruturado de um cardápio de demonstração e sua versão encapsulada em XML. | **Mecanismo de *Fallback***: usado quando a chamada à API falha ou retorna vazio, garantindo a funcionalidade de demonstração da UI. |
+
+---
+
+### 2. Gerenciamento de Estado e Contexto (Hooks)
+
+| Linha(s) | Função/Estado | Descrição | Importância |
+| :--- | :--- | :--- | :--- |
+| `L364` | `messages` | O estado principal que armazena a conversação (mensagens do usuário, respostas do bot e o chip de cardápio). | Controla a renderização da `FlatList` e o histórico de contexto. |
+| `L373-L382` | `selectedRange`, `servings`, `budget`, etc. | Variáveis de estado que controlam os *inputs* e *chips* da área de configuração (cabeçalho da lista). | Os valores desses estados compõem o contexto de planejamento enviado ao motor de geração. |
+| `L383` | `lastMenuChip` | Armazena o último cardápio válido gerado, incluindo a URI do PDF. | Permite a referência e o compartilhamento do último resultado e é incluído no `requestContext` (L407) para manter a consistência. |
+| `L399-L432` | `requestContext` | Hook `useMemo` que **compila todos os estados de planejamento** (perfil, metas, despensa, restrições) em um único objeto JSON. | **CRÍTICO:** Este objeto JSON é o "cérebro" da personalização, sendo enviado como contexto para o processador de planejamento. |
+
+---
+
+### 3. Lógica de Interação e Comunicação
+
+| Linha(s) | Função | Descrição | Importância |
+| :--- | :--- | :--- | :--- |
+| `L438-L459` | `callGemini(prompt)` | Função assíncrona que envia a requisição para a API externa (através de `fetch`). | **Ponto de comunicação com o motor de planejamento.** Se falhar, o sistema usa o *fallback*. |
+| `L473-L508` | `handleSend` | Processa a mensagem do usuário: adiciona a mensagem, exibe o *typing indicator*, chama `callGemini` com o prompt construído por `buildPrompt`, e trata a resposta. | O orquestrador do fluxo de chat e geração de cardápio. |
+| `L941-L985` | `buildPrompt(userText, ctx)` | Monta a instrução completa para o modelo de linguagem, injetando o `userText` e o JSON de `ctx` (o `requestContext` da L399). | **Define a personalidade e as regras de planejamento** (regras de segurança, formato JSON de saída, regras de priorização). |
+| `L523-L536` | `sharePdf` | Lida com o compartilhamento do PDF gerado (URI local) usando `expo-sharing`. | Funcionalidade de exportação essencial para a usabilidade. |
+| `L551-L606` | `finishWithParsedMenu` | Função final que insere a resposta do bot e o componente `MenuChip` na lista de mensagens, após a geração bem-sucedida ou *fallback*. | Responsável por atualizar o `lastMenuChip` e disparar a geração do PDF. |
+
+---
+
+### 4. Processamento de Cardápio e PDF
+
+| Linha(s) | Função | Descrição | Importância |
+| :--- | :--- | :--- | :--- |
+| `L987-L1010` | `parseMenuChip(raw)` | Analisa a resposta bruta (`raw`) do modelo, extraindo o JSON que está entre as tags `<MENU>` e `</MENU>`. | Garante que o conteúdo estruturado seja extraído do texto de conversação para ser renderizado como um componente interativo. |
+| `L1019-L1031` | `generateMenuPdf(menuChip)` | Chama `buildMenuHtml` para criar o HTML, usa `Print.printToFileAsync` para gerar o PDF e move o arquivo para um diretório persistente. | Responsável por criar o artefato final (PDF) a partir da estrutura JSON do cardápio. |
+| `L1042-L1070` | `applyUserOverrides` | Processa o texto do usuário para encontrar comandos simples de substituição (ex: "trocar o café da manhã por..."). | Permite que o usuário faça alterações rápidas no cardápio gerado sem ter que regenerar tudo. |
+| `L1109-L1190` | `buildMenuHtml` | Gera a *string* HTML formatada com CSS para ser utilizada pelo `expo-print` (formato A4 para impressão). | Converte os dados estruturados do JSON em uma representação visual para o PDF. |
+
+---
+
+### 5. Componentes de UI e Estilização
+
+| Linha(s) | Componente/Função | Descrição | Importância |
+| :--- | :--- | :--- | :--- |
+| `L539` | `renderItem` | Função que decide qual componente renderizar para cada item da lista (`MessageRow`, `TypingRow`, `MenuRow`). | Gerencia a diversidade de tipos de mensagens no chat. |
+| `L684-L715` | `MenuPreview` | Componente visual que exibe o resumo do cardápio gerado (dias, refeições, lista de compras) dentro do chat. | **Representação central do resultado do planejamento**, permitindo interação imediata. |
+| `L741-L760` | `PdfAttachment` | Componente para exibir um link de download/compartilhamento de um PDF dentro de uma bolha de mensagem. | Indica a presença do artefato de exportação. |
+| `L627-L633` | `inputBar` | `View` que contém a caixa de texto e o botão de envio. | Inclui o gerenciamento de *loading* (`ActivityIndicator`) e a lógica de habilitação/desabilitação do botão de envio. |
+
