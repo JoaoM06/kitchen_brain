@@ -6,7 +6,7 @@
 // }
 
 import api from "./client";
-const HARD_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0aGFpcy5wYWl2YUBnbWFpbC5jb20iLCJleHAiOjE3NjI5MjgxMTl9.s8D6yfV5WqbobdQ7MOA1w539W4Bg51xJ3CjTJDd-bH0";
+const HARD_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0aGFpcy5wYWl2YUBnbWFpbC5jb20iLCJleHAiOjE3NjM0MDI4OTd9.-WI_FKkfNaKiCmtRxl06Y2gutU7DI_k67uoDmWN3RsU";
 
 export async function confirmVoiceItems(selections) {
   const { data } = await api.post(
