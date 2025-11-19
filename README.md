@@ -1,4 +1,4 @@
-# kitchen_brain
+**# kitchen_brain
 
 uvicorn app.main:app --reload
 
@@ -202,216 +202,207 @@ Vermelho com microfone cortado quando está gravando.
 O clique alterna entre startRecording e stopRecording.
 
 
-Documentação CardápioBotScreen
+ CardápioBotScreen — Visão Geral
 
-1. Importações
-
-
-```
-React, useState, useEffect, useRef: Hooks essenciais do React para estado, efeitos colaterais e referências.
-
-ActivityIndicator: Spinner para mostrar carregamento.
-
-FlatList: Lista eficiente para mensagens do chat.
-
-KeyboardAvoidingView: Ajusta a UI quando o teclado aparece (iOS/Android).
-
-Platform: Detecta a plataforma para comportamentos diferentes.
-
-TextInput, TouchableOpacity, View, Text: Componentes básicos de interface.
-
-Keyboard: Permite escutar eventos do teclado.
-
-useHeaderHeight: Retorna a altura real do header do navigation stack (importante para offset do teclado).
-
-Constants: Permite pegar configurações do Expo (como API_KEY).
-
-Ionicons: Ícones da biblioteca de ícones do Expo/React Native
-```
-2. Constantes de configuração
-```
-const GEMINI_MODEL = "gemini-2.5-flash"; // modelo Gemini usado para gerar conteúdo
-const API_KEY = Constants.expoConfig?.extra?.GEMINI_API_KEY; // chave da API do Gemini
-```
-- Define o modelo generativo e a chave de API.
-```
-const EMOJIS = ["😀","😁","😂","😊","😍","😋","😎","🤔","🙌","👍","👎","🥗","🍲","🍛","🍳","🥪","🍎","🥦","🧀","🥖","🍗"];
-```
-- Array de emojis disponíveis para o teclado emoji do chat.
-```
-const STARTER_BOT_MSG = {
-  id: "m0",
-  role: "bot",
-  text: "Bom dia! Sou seu assistente de geração de cardápios! Inicie uma conversa comigo para que eu possa te auxiliar a montar o melhor cardápio possível para você!",
-};
-```
-- Mensagem inicial do bot ao abrir a tela.
-
-3. Estado do componente
-```
-const [messages, setMessages] = useState([STARTER_BOT_MSG]); // array de mensagens
-const [text, setText] = useState(""); // texto do input
-const [loading, setLoading] = useState(false); // indica se uma requisição está em andamento
-const [showEmoji, setShowEmoji] = useState(false); // mostra ou esconde o painel de emojis
-```
-- messages: histórico do chat.
-
-- text: texto digitado no input.
-
-- loading: controla spinner e bloqueio do input enquanto o bot responde.
-
-- showEmoji: boolean que controla a exibição do teclado emoji.
-
-4. Refs e altura do header
-```
-const listRef = useRef(null); // referência para FlatList (scroll)
-const inputRef = useRef(null); // referência para TextInput (focus)
-const headerHeight = useHeaderHeight(); // altura real do header para offset do teclado
-```
-- listRef: usado para scroll automático ao enviar/receber mensagens.
-
-- inputRef: permite focar o input programaticamente.
-
-- headerHeight: usado no KeyboardAvoidingView para calcular offset.
+A CardapioBotScreen é a tela onde o usuário conversa com o assistente culinário para gerar cardápios personalizados, ajustar refeições e exportar tudo em PDF.
+Para facilitar o entendimento, aqui estão as funcionalidades da tela e depois como o código implementa essas funcionalidades.
 
 
-CardapioBot: Seu Assistente de Planejamento Culinário
 
-O CardapioBot é uma aplicação móvel desenvolvida em React Native que simplifica o planejamento de refeições. Ele atua como um planejador inteligente, organizando cardápios semanais ou diários completos com base nas suas necessidades, restrições e inventário de cozinha.
+  Funcionalidades da Tela
 
-**Funcionalidades em Destaque**
+### 1. Chat com o assistente
 
-* Planejamento Personalizado e Contextual: Gera planos de refeições altamente detalhados, considerando um conjunto abrangente de informações do usuário:
-* Restrições Alimentares: Estilo dietético (`Sem lactose`, `Flexitariana`, etc.) e lista de alergias/exclusões.
-* Metas Nutricionais: Atende a objetivos específicos de macronutrientes e calorias.
-* Inventário de Cozinha: Prioriza o uso de itens disponíveis na despensa e produtos com vencimento próximo, otimizando o estoque e reduzindo o desperdício.
-* Logística: Considera tempo máximo de preparo, equipamentos de cozinha disponíveis (Air fryer, Panela de pressão, etc.) e culinárias desejadas.
-* Interface Interativa: Utiliza uma interface de chat para receber pedidos de forma conversacional e intuitiva, com atalhos para solicitações rápidas (`Batch cooking`, `Despensa primeiro`).
-* Relatórios Estruturados: O resultado é um cardápio completo, apresentado em um "chip" interativo que inclui:
-    Sugestões de Refeições por dia.
-    Estimativas Nutricionais (Kcal, Proteína, Carboidratos, Gordura).
-    Plano de *Batch Cooking* (preparos antecipados).
-    Lista de Compras detalhada.
-    Estimativa de Custo.
-Gerador de PDF: Converte o cardápio gerado em um arquivo PDF formatado para fácil visualização, impressão e compartilhamento.
-Ajustes Rápidos: Permite ao usuário solicitar alterações pontuais (ex: "Trocar o almoço de terça por sopa") e as aplica no cardápio de forma automática.
-Persistência de Contexto: Mantém as preferências de planejamento e o último cardápio gerado em exibição para referência e consistência.
+O usuário conversa com o bot como se fosse um chat normal.
+Ele envia pedidos como “quero um cardápio para 3 dias” e recebe cardápios estruturados, mensagens explicativas, PDFs e sugestões.
 
-**Estrutura Técnica**
+### 2. Geração de cardápios personalizados
 
-O CardapioBot é construído em React Native e utiliza várias bibliotecas para suas funcionalidades:
+O cardápio é montado com base em várias informações:
 
-* Interface: Componentes customizados para o chat, cartões de contexto (`Section`, `InfoBadge`) e seleção de parâmetros (`Chip`).
-* Navegação e Layout: Utiliza `@react-navigation/elements` para obter a altura do cabeçalho e `KeyboardAvoidingView` para uma experiência de entrada de texto fluida.
-* Geração de Documentos: Implementa as bibliotecas `expo-print` e `expo-file-system` para a conversão do cardápio em HTML e sua exportação como PDF.
-* Compartilhamento: Utiliza `expo-sharing` para permitir que o usuário baixe ou compartilhe o PDF do cardápio gerado.
+* preferências alimentares
+* restrições (alergias, estilo alimentar)
+* itens da despensa (em especial os que estão para vencer)
+* tempo máximo de preparo
+* orçamento
+* número de porções
+* equipamentos disponíveis
+* culinárias desejadas
 
-O núcleo do aplicativo reside na coleta de dados do usuário (perfil e preferências), sua compilação em um contexto detalhado, e no processamento dessa informação para gerar o plano de refeições estruturado.
+O usuário ajusta tudo isso através dos chips e seletores no topo da tela ou por mensagens diretas.
 
-## Documentação Detalhada da Tela CardapioBotScreen (React Native)
+### 3. Ajustes rápidos no cardápio já gerado
 
-O arquivo `CardapioBotScreen.jsx` implementa um assistente inteligente de planejamento de cardápios. A tela integra uma interface de chat com uma área de configuração de contexto que alimenta um poderoso mecanismo de geração de planos de refeição estruturados.
+O usuário pode pedir:
 
-### 1. Constantes e Dados de Contexto (Setup Inicial)
+* “troque o almoço de terça”
+* “remove o café da manhã”
+* “troque frango por tofu”
 
-| Linha(s) | Variável/Constante | Descrição | Importância |
-| :--- | :--- | :--- | :--- |
-| `L21` | `GEMINI_MODEL` | O modelo de linguagem utilizado. | Define o motor de geração de conteúdo. |
-| `L32-L37` | `PROFILE_SNAPSHOT` | Dados estáticos (simulados) do perfil do usuário: nome, estilo alimentar, alergias e metas de macros. | Fundamental para personalizar o cardápio e manter as restrições de segurança. |
-| `L48-L51` | `EXPIRING_ITEMS` | Lista de itens da despensa com vencimento próximo. | Prioriza o uso desses itens no algoritmo de planejamento para evitar desperdício. |
-| `L55-L67` | `QUICK_PROMPTS` | Objetos para atalhos de prompt, usando *placeholders* (ex: `{range}`, `{tempo}`). | Melhora a usabilidade, permitindo que o usuário envie pedidos complexos rapidamente. |
-| `L74-L359` | `MOCK_MENU_PAYLOAD`, `MOCK_MENU_RESPONSE` | JSON estruturado de um cardápio de demonstração e sua versão encapsulada em XML. | **Mecanismo de *Fallback***: usado quando a chamada à API falha ou retorna vazio, garantindo a funcionalidade de demonstração da UI. |
+A tela identifica esses comandos e modifica apenas o que foi pedido, sem gerar tudo de novo.
 
----
+### 4. Geração e download de PDF
 
-### 2. Gerenciamento de Estado e Contexto (Hooks)
+Depois que o cardápio é gerado, o app transforma o conteúdo em PDF.
+O usuário pode baixar ou compartilhar o arquivo.
 
-| Linha(s) | Função/Estado | Descrição | Importância |
-| :--- | :--- | :--- | :--- |
-| `L364` | `messages` | O estado principal que armazena a conversação (mensagens do usuário, respostas do bot e o chip de cardápio). | Controla a renderização da `FlatList` e o histórico de contexto. |
-| `L373-L382` | `selectedRange`, `servings`, `budget`, etc. | Variáveis de estado que controlam os *inputs* e *chips* da área de configuração (cabeçalho da lista). | Os valores desses estados compõem o contexto de planejamento enviado ao motor de geração. |
-| `L383` | `lastMenuChip` | Armazena o último cardápio válido gerado, incluindo a URI do PDF. | Permite a referência e o compartilhamento do último resultado e é incluído no `requestContext` (L407) para manter a consistência. |
-| `L399-L432` | `requestContext` | Hook `useMemo` que **compila todos os estados de planejamento** (perfil, metas, despensa, restrições) em um único objeto JSON. | **CRÍTICO:** Este objeto JSON é o "cérebro" da personalização, sendo enviado como contexto para o processador de planejamento. |
+### 5. Emojis, digitação e experiência de chat
 
----
+A tela inclui:
 
-### 3. Lógica de Interação e Comunicação
-
-| Linha(s) | Função | Descrição | Importância |
-| :--- | :--- | :--- | :--- |
-| `L438-L459` | `callGemini(prompt)` | Função assíncrona que envia a requisição para a API externa (através de `fetch`). | **Ponto de comunicação com o motor de planejamento.** Se falhar, o sistema usa o *fallback*. |
-| `L473-L508` | `handleSend` | Processa a mensagem do usuário: adiciona a mensagem, exibe o *typing indicator*, chama `callGemini` com o prompt construído por `buildPrompt`, e trata a resposta. | O orquestrador do fluxo de chat e geração de cardápio. |
-| `L941-L985` | `buildPrompt(userText, ctx)` | Monta a instrução completa para o modelo de linguagem, injetando o `userText` e o JSON de `ctx` (o `requestContext` da L399). | **Define a personalidade e as regras de planejamento** (regras de segurança, formato JSON de saída, regras de priorização). |
-| `L523-L536` | `sharePdf` | Lida com o compartilhamento do PDF gerado (URI local) usando `expo-sharing`. | Funcionalidade de exportação essencial para a usabilidade. |
-| `L551-L606` | `finishWithParsedMenu` | Função final que insere a resposta do bot e o componente `MenuChip` na lista de mensagens, após a geração bem-sucedida ou *fallback*. | Responsável por atualizar o `lastMenuChip` e disparar a geração do PDF. |
-
----
-
-### 4. Processamento de Cardápio e PDF
-
-| Linha(s) | Função | Descrição | Importância |
-| :--- | :--- | :--- | :--- |
-| `L987-L1010` | `parseMenuChip(raw)` | Analisa a resposta bruta (`raw`) do modelo, extraindo o JSON que está entre as tags `<MENU>` e `</MENU>`. | Garante que o conteúdo estruturado seja extraído do texto de conversação para ser renderizado como um componente interativo. |
-| `L1019-L1031` | `generateMenuPdf(menuChip)` | Chama `buildMenuHtml` para criar o HTML, usa `Print.printToFileAsync` para gerar o PDF e move o arquivo para um diretório persistente. | Responsável por criar o artefato final (PDF) a partir da estrutura JSON do cardápio. |
-| `L1042-L1070` | `applyUserOverrides` | Processa o texto do usuário para encontrar comandos simples de substituição (ex: "trocar o café da manhã por..."). | Permite que o usuário faça alterações rápidas no cardápio gerado sem ter que regenerar tudo. |
-| `L1109-L1190` | `buildMenuHtml` | Gera a *string* HTML formatada com CSS para ser utilizada pelo `expo-print` (formato A4 para impressão). | Converte os dados estruturados do JSON em uma representação visual para o PDF. |
-
----
-
-### 5. Componentes de UI e Estilização
-
-| Linha(s) | Componente/Função | Descrição | Importância |
-| :--- | :--- | :--- | :--- |
-| `L539` | `renderItem` | Função que decide qual componente renderizar para cada item da lista (`MessageRow`, `TypingRow`, `MenuRow`). | Gerencia a diversidade de tipos de mensagens no chat. |
-| `L684-L715` | `MenuPreview` | Componente visual que exibe o resumo do cardápio gerado (dias, refeições, lista de compras) dentro do chat. | **Representação central do resultado do planejamento**, permitindo interação imediata. |
-| `L741-L760` | `PdfAttachment` | Componente para exibir um link de download/compartilhamento de um PDF dentro de uma bolha de mensagem. | Indica a presença do artefato de exportação. |
-| `L627-L633` | `inputBar` | `View` que contém a caixa de texto e o botão de envio. | Inclui o gerenciamento de *loading* (`ActivityIndicator`) e a lógica de habilitação/desabilitação do botão de envio. |
+* painel de emojis
+* indicador de “bot digitando...”
+* rolagem automática
+* mensagem inicial de boas-vindas
 
 
-## Documentação da Tela ConfirmItemsScreen (React Native)
 
-O arquivo `ConfirmItemsScreen.jsx` implementa uma tela crucial para a funcionalidade de gerenciamento de estoque, especificamente para a **confirmação e ajuste de itens identificados automaticamente**, como, por exemplo, através de entrada de voz ou escaneamento.
+  Como o Código Implementa Isso
 
-O objetivo principal desta tela é permitir que o usuário revise e complete os metadados (localização, quantidade, validade) de cada item detectado antes de inseri-los no inventário.
+### 1. Estados principais
 
-### 1. Estrutura e Dados Iniciais
+O código mantém:
 
-| Linha(s) | Variável/Função | Descrição | Importância |
-| :--- | :--- | :--- | :--- |
-| `L11` | `initialItems` | Recebe a lista de itens brutos (provavelmente do resultado de um processamento de linguagem natural ou OCR) via `route.params`. | **Ponto de entrada de dados:** O fluxo da aplicação depende da correta passagem desses itens não confirmados. |
-| `L12-L24` | `rows` (estado) | Estado principal que armazena a lista de itens no formato editável. Cada objeto em `rows` inclui campos para o texto de origem, nome sugerido, candidatos de produtos existentes e campos de metadados a serem preenchidos (`location`, `quantity`, `expiry_text`). | **Núcleo da UI:** Gerencia todos os dados editáveis pelo usuário e o estado da expansão (`open`). |
-| `L27-L30` | `toggleOpen(idx)` | Função para expandir/recolher o cartão de um item na `FlatList`. | Melhora a usabilidade, permitindo que o usuário se concentre nos detalhes de um item por vez (padrão *accordion*). |
+* o histórico do chat (messages)
+* o texto digitado pelo usuário
+* o indicador de carregamento
+* o painel de emojis
+* os parâmetros do planejamento (dias, orçamento, etc.)
+* o último cardápio gerado (para PDFs e ajustes)
 
----
+Esses estados alimentam o `requestContext`, um objeto JSON gigante enviado ao modelo sempre que o usuário interage.
 
-### 2. Funções de Manipulação de Estado (Edição)
+### 2. requestContext
 
-| Linha(s) | Função | Descrição | Importância |
-| :--- | :--- | :--- | :--- |
-| `L32-L34` | `setField(idx, field, value)` | Função genérica para atualizar qualquer campo de um item específico na matriz `rows`. | Abstrai a lógica de atualização imutável do estado para os diversos `DefaultInput` da tela. |
-| `L36-L44` | `onChangeCandidate(idx, candId)` | Atualiza o `chosen_product_generic_id` (ID do produto existente selecionado) e limpa o campo `new_product_name`. | Gerencia a seleção entre usar um produto existente (`candidate`) ou criar um novo. |
+É um objeto montado com `useMemo` que junta:
 
----
+* perfil alimentar
+* metas nutricionais
+* itens para vencer
+* preferências culinárias
+* configurações dos chips
+* histórico do último cardápio
+* e o que mais for necessário para o planejamento
 
-### 3. Lógica de Confirmação e Envio (API) 
+Esse JSON é enviado para o modelo no prompt final.
 
-| Linha(s) | Função | Descrição | Importância |
-| :--- | :--- | :--- | :--- |
-| `L46-L79` | `onConfirm` | Função assíncrona executada ao pressionar o botão "Confirmar". | **CRÍTICO:** Responsável por compilar e enviar os dados finais para o backend. |
-| `L51-L64` | Mapeamento dos Dados | Mapeia os dados editados em `rows` para o formato esperado pela API (`selections`), determinando se o item deve ser **criado como novo** ou **vinculado a um produto existente** com base nos campos `chosen_product_generic_id` e `new_product_name`. | Lógica de decisão crucial para o sistema de estoque: `createNew` garante que novos itens sejam nomeados corretamente. |
-| `L66` | `confirmVoiceItems(selections)` | Chamada à função de API para persistir os itens confirmados no inventário. | Ponto de integração com o backend para salvar o estoque. |
-| `L68` | `navigation.replace("Stock")` | Após o sucesso, navega para a tela de estoque, substituindo a tela atual no histórico. | Garante um fluxo de usuário limpo e que o usuário veja o resultado imediatamente. |
+### 3. Comunicação com o modelo
 
----
+A função `callGemini` faz a requisição à API.
+Se a API falhar, o código usa um cardápio mockado (payload de fallback).
 
-### 4. Renderização dos Itens (`FlatList` e `renderItem`)
+### 4. Fluxo do envio de mensagens
 
-| Linha(s) | Elemento/Lógica | Descrição | Importância |
-| :--- | :--- | :--- | :--- |
-| `L83-L88` | `topName` | Determina qual nome exibir no cabeçalho não expandido do cartão (o nome do produto escolhido ou o nome de origem se não houver escolha). | Garante que o usuário veja a escolha feita mesmo quando o cartão está recolhido. |
-| `L90-L99` | `Pressable` (`rowTop`) | O cabeçalho do cartão que exibe o nome do produto e o texto original (`source_text`) e contém o ícone para expandir/recolher. | Ponto de interação principal para abrir os detalhes de edição. |
-| `L102-L123` | Sugestões (`candidates`) | Se houver candidatos de produtos existentes, exibe-os com um *score* de similaridade e permite a seleção via `Pressable`. | Permite ao usuário corrigir ou confirmar a vinculação do item a um produto padrão (catálogo). |
-| `L125-L136` | Escolha de Local (`rowChoices`) | Exibe *chips* pré-definidos (`geladeira`, `armário`, `freezer`) para seleção rápida do local de armazenamento. | Melhora a velocidade de entrada de dados para campos comuns. |
-| `L138-L157` | `DefaultInput` | Campos de entrada para Quantidade (`quantity`), Unidade (`unit_input`) e Validade (`expiry_text`), permitindo ajustes finos nos metadados. | Permite a entrada manual dos metadados essenciais para o gerenciamento de estoque. |
-| `L166-L170` | `footer` e `DefaultButton` | Rodapé fixo na parte inferior da tela com o botão de confirmação, que exibe um `ActivityIndicator` durante o salvamento. | Controla o ponto de ação final e o estado de *loading* da transação. |
+A função `handleSend` faz tudo:
+
+1. adiciona a mensagem do usuário
+2. mostra “bot digitando”
+3. monta o prompt
+4. chama a API
+5. analisa a resposta
+6. extrai o JSON do cardápio
+7. gera o PDF
+8. insere o cardápio no chat
+
+### 5. Processamento da resposta
+
+Depois que chega a resposta do modelo:
+
+* `parseMenuChip` extrai o JSON delimitado pelas tags
+* `applyUserOverrides` examina pedidos de troca/remoção
+* `generateMenuPdf` transforma o JSON em HTML e depois em PDF
+* `buildMenuHtml` monta o HTML final
+
+### 6. Renderização
+
+A tela usa uma `FlatList` para o chat, que escolhe automaticamente se a mensagem é:
+
+* texto do usuário
+* texto do bot
+* cardápio
+* PDF
+* indicador de digitação
+
+Também existem componentes específicos para:
+
+* pré-visualização do cardápio
+* anexos PDF
+* barra de input
+
+
+
+ ConfirmItemsScreen — Visão Geral
+
+A `ConfirmItemsScreen` é a tela onde o usuário revisa itens detectados automaticamente antes de colocá-los no estoque.
+
+
+
+ Funcionalidades da Tela
+
+### 1. Revisar itens detectados por voz/OCR
+
+Cada item aparece com:
+
+* nome sugerido
+* candidatos parecidos (produtos existentes)
+* quantidade
+* unidade
+* validade
+* local de armazenamento
+
+### 2. Ajustar os itens manualmente
+
+O usuário pode:
+
+* editar nome
+* escolher um produto existente
+* definir o local (geladeira, freezer, armário)
+* ajustar quantidade e validade
+* abrir ou fechar cada item para ver mais detalhes
+
+### 3. Confirmar tudo e enviar para o estoque
+
+Depois de revisar, o usuário confirma e o app:
+
+* decide se o item cria um produto novo
+* ou se liga a um produto existente
+* envia tudo para a API
+* redireciona para a tela de estoque
+
+
+
+Como o Código Implementa Isso
+
+### 1. Controle dos itens
+
+A tela recebe `initialItems` via navegação.
+Cada item vira um objeto editável em `rows`, incluindo:
+
+* campos para edição
+* candidatos
+* se está expandido ou não
+
+### 2. Edição dos campos
+
+`setField` atualiza qualquer campo do item.
+`onChangeCandidate` define o produto selecionado e limpa o nome customizado.
+
+### 3. Confirmação
+
+`onConfirm` percorre os itens, monta a estrutura final, chama a API `confirmVoiceItems` e troca a tela para “Stock”.
+
+### 4. UI
+
+A FlatList renderiza:
+
+* cartão recolhido (nome + texto original)
+* cartão expandido (tudo editável)
+* sugestões, chips de locais e inputs
+
+O botão final usa loading para indicar salvamento.
+
+
+
+
+
 
