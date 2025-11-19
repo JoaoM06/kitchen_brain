@@ -17,15 +17,6 @@ O módulo de perfil do Kitchen Brain é responsável por gerenciar as informaç�
 - Sincronização de dados com o dispositivo móvel
 - Logout e limpeza de sessão local
 
-**Endpoints da API**
-
-- POST /perfil/ — cria novo perfil de usuário
-- GET /perfil/{id} — obtém dados do usuário
-- PUT /perfil/{id} — atualiza informações do perfil
-- DELETE /perfil/{id} — remove perfil
-- POST /login/ — autentica usuário
-- POST /logout/ — encerra sessão
-
 **Interface Mobile**
 
 - Tela inicial com informações do usuário (foto, nome, preferências)
@@ -33,10 +24,6 @@ O módulo de perfil do Kitchen Brain é responsável por gerenciar as informaç�
 - Tela de configurações (idioma, notificações, privacidade)
 - Integração com AsyncStorage para persistência local de sessão
 - Uso de ícones e componentes visuais do React Native Vector Icons
-
-**Tecnologias**
-
-Back-End: Python, FastAPI, SQLAlchemy, Pydantic Front-End: React Native, Expo, Axios, AsyncStorage, React Navigation
 
 **Regras de Negócio**
 
@@ -59,23 +46,11 @@ O módulo de estoque do Kitchen Brain é responsável por gerenciar os ingredien
 - Alertas de validade e de estoque baixo
 - Integração com o Módulo de Receitas para checagem de disponibilidade
 
-**Endpoints da API**
-
-- GET /estoque/ — lista produtos
-- POST /estoque/ — adiciona item
-- PUT /estoque/{id} — atualiza item ou quantidade
-- DELETE /estoque/{id} — remove item
-- GET /estoque/alertas/ — lista itens com alerta de validade
-
 **Interface Mobile**
 
 - Tela principal com listagem de itens e status por cor (verde: ok, amarelo: alerta, vermelho: vencido/baixo)
 - Botão flutuante para adicionar novo item
 - Tela de detalhes com histórico de movimentação e edição
-
-**Tecnologias**
-
-Back-End: Python, FastAPI, SQLAlchemy, Pydantic Front-End: React Native, Expo, Axios, AsyncStorage
 
 **Regras de Negócio**
 
@@ -97,16 +72,6 @@ O módulo de receitas é o núcleo do Kitchen Brain, responsável por gerenciar 
 - Armazenamento de notas e avaliações do usuário para cada receita
 - Marcação de receitas como favoritas
 
-**Endpoints da API**
-
-- GET /receitas/ — lista todas as receitas disponíveis (públicas e privadas do usuário)
-- POST /receitas/ — cria uma nova receita
-- GET /receitas/{id} — obtém detalhes de uma receita específica
-- PUT /receitas/{id} — atualiza informações da receita
-- DELETE /receitas/{id} — remove uma receita
-- GET /receitas/{id}/viabilidade — checa ingredientes no estoque e retorna status
-- GET /receitas/favoritas/ — lista receitas favoritas do usuário
-
 **Interface Mobile**
 
 - Tela principal de exploração (feed) com filtros de busca
@@ -120,4 +85,3 @@ O módulo de receitas é o núcleo do Kitchen Brain, responsável por gerenciar 
 - Receitas criadas pelo usuário são privadas por padrão, mas podem ser tornadas públicas
 - A viabilidade da receita (cálculo de ingredientes) deve consultar o Módulo de Estoque em tempo real
 - Apenas o criador da receita ou um administrador pode editá-la ou excluí-la
-
