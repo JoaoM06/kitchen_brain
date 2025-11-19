@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.auth import ProfileInput
+from app.schemas.cardapio import CardapioInput
 from app.api.deps import get_current_user
 from fastapi.security.http import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -22,3 +23,11 @@ def profile_post(body: ProfileInput, db: Session = Depends(get_db), auth: HTTPAu
 def profile_data(db: Session = Depends(get_db), auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),):
     user = get_current_user(auth.credentials, db)
     return user
+
+@router.post("/cardapio")
+def cardapio_post(body: CardapioInput, db: Session = Depends(get_db), auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),):
+    user = get_current_user(auth.credentials, db)
+    if user.cardapios == None:
+        user.cardapios = []
+    user.cardapios.append(body.cardapio)
+    db.commit()

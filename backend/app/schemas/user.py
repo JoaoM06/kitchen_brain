@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     preferencias: Optional[Dict[str, Any]] = None
     alergias: Optional[List[str]] = None
     restricoes_alimentares: Optional[List[str]] = None
+    cardapios: Optional[List[str]] = None
 
 class UserCreate(UserBase):
     senha: str

@@ -35,3 +35,7 @@ class User(Base):
     restricoes_alimentares: Mapped[Optional[List[str]]] = mapped_column(
         ARRAY(String(100)), nullable=True, default=None
     )
+    cardapios: Mapped[Optional[List[str]]] = mapped_column(
+        ARRAY(String(100)), nullable=True, default=None
+    )
+    bio: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, default=None)

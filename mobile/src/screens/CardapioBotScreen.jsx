@@ -24,6 +24,7 @@ import * as Sharing from "expo-sharing";
 import SafeScreen from "../components/SafeScreen";
 import FooterNav from "../components/FooterNav";
 import { colors } from "../theme/colors";
+import { salvarCardapio } from "../api/cardapio";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 const API_KEY = "AIzaSyAH6qpSJoleMZT7XcfkEPK8ThJegPHKjGw";
@@ -1313,6 +1314,7 @@ async function generateMenuPdf(menuChip) {
   const dest = FileSystem.documentDirectory + filename;
 
   await FileSystem.moveAsync({ from: file.uri, to: dest });
+  await salvarCardapio(menuChip)
   return { uri: dest, name: filename };
 }
 
