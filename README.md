@@ -367,3 +367,51 @@ O arquivo `CardapioBotScreen.jsx` implementa um assistente inteligente de planej
 | `L741-L760` | `PdfAttachment` | Componente para exibir um link de download/compartilhamento de um PDF dentro de uma bolha de mensagem. | Indica a presença do artefato de exportação. |
 | `L627-L633` | `inputBar` | `View` que contém a caixa de texto e o botão de envio. | Inclui o gerenciamento de *loading* (`ActivityIndicator`) e a lógica de habilitação/desabilitação do botão de envio. |
 
+
+## Documentação da Tela ConfirmItemsScreen (React Native)
+
+O arquivo `ConfirmItemsScreen.jsx` implementa uma tela crucial para a funcionalidade de gerenciamento de estoque, especificamente para a **confirmação e ajuste de itens identificados automaticamente**, como, por exemplo, através de entrada de voz ou escaneamento.
+
+O objetivo principal desta tela é permitir que o usuário revise e complete os metadados (localização, quantidade, validade) de cada item detectado antes de inseri-los no inventário.
+
+### 1. Estrutura e Dados Iniciais
+
+| Linha(s) | Variável/Função | Descrição | Importância |
+| :--- | :--- | :--- | :--- |
+| `L11` | `initialItems` | Recebe a lista de itens brutos (provavelmente do resultado de um processamento de linguagem natural ou OCR) via `route.params`. | **Ponto de entrada de dados:** O fluxo da aplicação depende da correta passagem desses itens não confirmados. |
+| `L12-L24` | `rows` (estado) | Estado principal que armazena a lista de itens no formato editável. Cada objeto em `rows` inclui campos para o texto de origem, nome sugerido, candidatos de produtos existentes e campos de metadados a serem preenchidos (`location`, `quantity`, `expiry_text`). | **Núcleo da UI:** Gerencia todos os dados editáveis pelo usuário e o estado da expansão (`open`). |
+| `L27-L30` | `toggleOpen(idx)` | Função para expandir/recolher o cartão de um item na `FlatList`. | Melhora a usabilidade, permitindo que o usuário se concentre nos detalhes de um item por vez (padrão *accordion*). |
+
+---
+
+### 2. Funções de Manipulação de Estado (Edição)
+
+| Linha(s) | Função | Descrição | Importância |
+| :--- | :--- | :--- | :--- |
+| `L32-L34` | `setField(idx, field, value)` | Função genérica para atualizar qualquer campo de um item específico na matriz `rows`. | Abstrai a lógica de atualização imutável do estado para os diversos `DefaultInput` da tela. |
+| `L36-L44` | `onChangeCandidate(idx, candId)` | Atualiza o `chosen_product_generic_id` (ID do produto existente selecionado) e limpa o campo `new_product_name`. | Gerencia a seleção entre usar um produto existente (`candidate`) ou criar um novo. |
+
+---
+
+### 3. Lógica de Confirmação e Envio (API) 
+
+| Linha(s) | Função | Descrição | Importância |
+| :--- | :--- | :--- | :--- |
+| `L46-L79` | `onConfirm` | Função assíncrona executada ao pressionar o botão "Confirmar". | **CRÍTICO:** Responsável por compilar e enviar os dados finais para o backend. |
+| `L51-L64` | Mapeamento dos Dados | Mapeia os dados editados em `rows` para o formato esperado pela API (`selections`), determinando se o item deve ser **criado como novo** ou **vinculado a um produto existente** com base nos campos `chosen_product_generic_id` e `new_product_name`. | Lógica de decisão crucial para o sistema de estoque: `createNew` garante que novos itens sejam nomeados corretamente. |
+| `L66` | `confirmVoiceItems(selections)` | Chamada à função de API para persistir os itens confirmados no inventário. | Ponto de integração com o backend para salvar o estoque. |
+| `L68` | `navigation.replace("Stock")` | Após o sucesso, navega para a tela de estoque, substituindo a tela atual no histórico. | Garante um fluxo de usuário limpo e que o usuário veja o resultado imediatamente. |
+
+---
+
+### 4. Renderização dos Itens (`FlatList` e `renderItem`)
+
+| Linha(s) | Elemento/Lógica | Descrição | Importância |
+| :--- | :--- | :--- | :--- |
+| `L83-L88` | `topName` | Determina qual nome exibir no cabeçalho não expandido do cartão (o nome do produto escolhido ou o nome de origem se não houver escolha). | Garante que o usuário veja a escolha feita mesmo quando o cartão está recolhido. |
+| `L90-L99` | `Pressable` (`rowTop`) | O cabeçalho do cartão que exibe o nome do produto e o texto original (`source_text`) e contém o ícone para expandir/recolher. | Ponto de interação principal para abrir os detalhes de edição. |
+| `L102-L123` | Sugestões (`candidates`) | Se houver candidatos de produtos existentes, exibe-os com um *score* de similaridade e permite a seleção via `Pressable`. | Permite ao usuário corrigir ou confirmar a vinculação do item a um produto padrão (catálogo). |
+| `L125-L136` | Escolha de Local (`rowChoices`) | Exibe *chips* pré-definidos (`geladeira`, `armário`, `freezer`) para seleção rápida do local de armazenamento. | Melhora a velocidade de entrada de dados para campos comuns. |
+| `L138-L157` | `DefaultInput` | Campos de entrada para Quantidade (`quantity`), Unidade (`unit_input`) e Validade (`expiry_text`), permitindo ajustes finos nos metadados. | Permite a entrada manual dos metadados essenciais para o gerenciamento de estoque. |
+| `L166-L170` | `footer` e `DefaultButton` | Rodapé fixo na parte inferior da tela com o botão de confirmação, que exibe um `ActivityIndicator` durante o salvamento. | Controla o ponto de ação final e o estado de *loading* da transação. |
+
