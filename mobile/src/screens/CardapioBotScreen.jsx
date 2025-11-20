@@ -13,19 +13,24 @@ import {
   Keyboard,
   Alert,
   Pressable,
+  ScrollView,
+  Switch,
 } from "react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
-import * as Print from "expo-print";
-import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import SafeScreen from "../components/SafeScreen";
 import FooterNav from "../components/FooterNav";
 import { colors } from "../theme/colors";
+import { addSavedMenu, getSavedMenus } from "../storage/savedMenus";
+import { BASE_URL } from "../api/client";
+import { getLocalStockItems, getLocalExpiringItems } from "../data/stock";
+import { generateMenuPdf } from "../utils/menuPdf";
 
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-2.5-flash-lite";
 const API_KEY = "AIzaSyAH6qpSJoleMZT7XcfkEPK8ThJegPHKjGw";
 
 const EMOJIS = ["😀","😁","😂","😊","😍","😋","😎","🤔","🙌","👍","👎","🥗","🍲","🍛","🍳","🥪","🍎","🥦","🧀","🥖","🍗"];
@@ -45,19 +50,64 @@ const PROFILE_SNAPSHOT = {
   macros: { kcal: 1800, protein: 110, carbs: 180, fat: 60 },
 };
 
-const PANTRY_ITEMS = [
-  { id: "p1", name: "Peito de frango", quantity: "1,2 kg", location: "Freezer", status: "ok" },
-  { id: "p2", name: "Abóbora cabotiá", quantity: "1 unidade", location: "Geladeira", status: "ok" },
-  { id: "p3", name: "Espinafre", quantity: "2 maços", location: "Geladeira", status: "alert" },
-  { id: "p4", name: "Grão-de-bico cozido", quantity: "3 porções", location: "Freezer", status: "ok" },
-  { id: "p5", name: "Queijo meia cura", quantity: "200 g", location: "Geladeira", status: "alert" },
-];
+const SAMPLE_PANTRY_PLACEHOLDER = getLocalStockItems().slice(0, 2);
 
-const EXPIRING_ITEMS = [
-  { id: "e1", name: "Iogurte sem lactose", expiresIn: "2 dias" },
-  { id: "e2", name: "Espinafre", expiresIn: "3 dias" },
-  { id: "e3", name: "Queijo meia cura", expiresIn: "4 dias" },
-];
+function formatPantryLine(item) {
+  if (!item) return "";
+  const pieces = [item.name?.trim()].filter(Boolean);
+  if (item.quantity) pieces.push(String(item.quantity).trim());
+  if (item.location) pieces.push(String(item.location).trim());
+  return pieces.join(" - ");
+}
+
+function parsePantryText(text, fallbackLocation = "Manual") {
+  if (!text) return [];
+  return text
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, idx) => {
+      const parts = line
+        .split("-")
+        .map((part) => part.trim())
+        .filter(Boolean);
+      const [name, quantity, location] = parts;
+      if (!name) return null;
+      return {
+        id: `manual-pantry-${idx}`,
+        name,
+        quantity: quantity || null,
+        location: location || fallbackLocation,
+        status: "manual",
+      };
+    })
+    .filter(Boolean);
+}
+
+function formatQuantityLabel(quantity, unit) {
+  if (quantity == null) return null;
+  const value = Number(quantity);
+  if (Number.isFinite(value)) {
+    const normalized = value % 1 === 0 ? value.toFixed(0) : value.toFixed(2).replace(/\.?0+$/, "");
+    return `${normalized} ${unit || ""}`.trim();
+  }
+  return `${quantity} ${unit || ""}`.trim();
+}
+
+function normalizePantryFromApi(items) {
+  if (!Array.isArray(items)) return [];
+  return items.map((item, idx) => {
+    const label = formatQuantityLabel(item.quantity, item.unit);
+    return {
+      id: item.id || `stock-${idx}`,
+      name: item.name || "Item",
+      quantity: label || item.quantityLabel || null,
+      location: item.location || "Despensa",
+      status: item.status || "ok",
+      daysToExpire: item.days_to_expire ?? item.daysToExpire ?? null,
+    };
+  });
+}
 
 const QUICK_PROMPTS = [
   {
@@ -435,6 +485,13 @@ export default function CardapioBotScreen({ navigation }) {
   const [contextNotes, setContextNotes] = useState("Usar verduras e laticínios com vencimento próximo, evitar frituras.");
   const [macroTarget, setMacroTarget] = useState({ kcal: "1800", protein: "110", carbs: "180", fat: "60" });
   const [lastMenuChip, setLastMenuChip] = useState(null);
+  const [savedMenus, setSavedMenus] = useState([]);
+  const [savingMenuId, setSavingMenuId] = useState(null);
+  const [useManualContext, setUseManualContext] = useState(false);
+  const [pantryItems, setPantryItems] = useState([]);
+  const [expiringItems, setExpiringItems] = useState([]);
+  const [editablePantryText, setEditablePantryText] = useState("");
+  const [pantryTextDirty, setPantryTextDirty] = useState(false);
 
   const listRef = useRef(null);
   const inputRef = useRef(null);
@@ -445,6 +502,78 @@ export default function CardapioBotScreen({ navigation }) {
     return () => sub.remove();
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const stored = await getSavedMenus();
+        if (isMounted) setSavedMenus(stored);
+      } catch (err) {
+        console.warn("Erro ao carregar cardápios salvos", err);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const applyLocalStockFallback = useCallback(() => {
+    const items = getLocalStockItems();
+    const expiring = getLocalExpiringItems();
+    setPantryItems(items);
+    setExpiringItems(expiring);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const token = await AsyncStorage.getItem("auth_token");
+        if (!token) {
+          applyLocalStockFallback();
+          return;
+        }
+        const res = await fetch(`${BASE_URL}/me/pantry`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`Pantry HTTP ${res.status}`);
+        const data = await res.json();
+        if (!isMounted) return;
+        const normalized = normalizePantryFromApi(data?.items);
+        if (!normalized.length) {
+          applyLocalStockFallback();
+          return;
+        }
+        setPantryItems(normalized);
+        const soon = normalized
+          .filter((item) => typeof item.daysToExpire === "number" && item.daysToExpire <= 5)
+          .map((item, idx) => ({
+            id: `${item.id || `exp-${idx}`}`,
+            name: item.name,
+            expiresIn:
+              item.daysToExpire == null
+                ? ""
+                : item.daysToExpire < 0
+                ? "Vencido"
+                : `${item.daysToExpire} dia${item.daysToExpire === 1 ? "" : "s"}`,
+          }));
+        setExpiringItems(soon);
+      } catch (err) {
+        console.warn("CardapioBot estoque", err);
+        if (isMounted) applyLocalStockFallback();
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [applyLocalStockFallback]);
+
+  useEffect(() => {
+    if (pantryTextDirty) return;
+    const text = pantryItems.map(formatPantryLine).join("\n");
+    setEditablePantryText(text || "");
+  }, [pantryItems, pantryTextDirty]);
+
   const allergyList = useMemo(
     () =>
       allergyNotes
@@ -454,8 +583,14 @@ export default function CardapioBotScreen({ navigation }) {
     [allergyNotes]
   );
 
+  const manualPantrySnapshot = useMemo(() => {
+    const parsed = parsePantryText(editablePantryText);
+    return parsed.length ? parsed : pantryItems;
+  }, [editablePantryText, pantryItems]);
+
   const requestContext = useMemo(
     () => ({
+      contextMode: "manual_form",
       userProfile: PROFILE_SNAPSHOT,
       conversationHistory: messages
         .filter((m) => m.text && !m.isTyping)
@@ -481,8 +616,8 @@ export default function CardapioBotScreen({ navigation }) {
         },
         notes: contextNotes,
       },
-      pantrySnapshot: PANTRY_ITEMS,
-      expiringSoon: EXPIRING_ITEMS,
+      pantrySnapshot: manualPantrySnapshot,
+      expiringSoon: expiringItems,
       lastMenu: lastMenuChip
         ? {
             title: lastMenuChip.title,
@@ -492,43 +627,98 @@ export default function CardapioBotScreen({ navigation }) {
           }
         : null,
     }),
-    [messages, selectedRange, selectedMeals, dietTags, allergyList, servings, budget, timePerMeal, selectedEquipment, selectedOrigins, prioritized, goal, macroTarget, contextNotes, lastMenuChip]
+    [messages, selectedRange, selectedMeals, dietTags, allergyList, servings, budget, timePerMeal, selectedEquipment, selectedOrigins, prioritized, goal, macroTarget, contextNotes, lastMenuChip, expiringItems, manualPantrySnapshot]
   );
+
+  const defaultContext = useMemo(
+    () => ({
+      contextMode: "auto_stock",
+      pantrySnapshot: pantryItems,
+      expiringSoon: expiringItems,
+    }),
+    [pantryItems, expiringItems]
+  );
+
+  const savedMenuIds = useMemo(() => new Set(savedMenus.map((item) => item.id)), [savedMenus]);
 
   const canSend = text.trim().length > 0 && !loading;
 
-  const callGemini = async (prompt) => {
+  const callGemini = async (body, retries = 3) => {
     if (!API_KEY) throw new Error("Falta GEMINI_API_KEY em app.json -> extra");
     setLoading(true);
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${API_KEY}`;
-    const body = {
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, topP: 0.95, topK: 40, maxOutputTokens: 1024 },
-    };
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      throw new Error(`Gemini HTTP ${res.status}: ${txt}`);
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+
+          // Se for erro 503 (overloaded) ou 429 (rate limit), tenta novamente
+          if ((res.status === 503 || res.status === 429) && attempt < retries) {
+            const waitTime = Math.min(1000 * Math.pow(2, attempt), 8000); // Backoff exponencial até 8s
+            console.log(`⏳ Gemini sobrecarregado. Tentando novamente em ${waitTime/1000}s... (${attempt + 1}/${retries})`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            continue;
+          }
+
+          throw new Error(`Gemini HTTP ${res.status}: ${txt}`);
+        }
+
+        const data = await res.json();
+        setLoading(false);
+
+        const txt =
+          data?.candidates?.[0]?.content?.parts?.map((p) => p?.text).filter(Boolean).join("\n")?.trim() || "";
+        if (!txt) throw new Error("Resposta vazia do Gemini");
+        return txt;
+
+      } catch (error) {
+        if (attempt === retries) {
+          setLoading(false);
+          throw error;
+        }
+        // Se for erro de rede, tenta novamente
+        const waitTime = Math.min(1000 * Math.pow(2, attempt), 8000);
+        console.log(`⚠️ Erro de conexão. Tentando novamente em ${waitTime/1000}s...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
     }
-    const data = await res.json();
-    const txt =
-      data?.candidates?.[0]?.content?.parts?.map((p) => p?.text).filter(Boolean).join("\n")?.trim() || "";
-    if (!txt) throw new Error("Resposta vazia do Gemini");
-    return txt;
   };
+
+  const handleSaveMenu = useCallback(async (menuChip) => {
+    if (!menuChip) return;
+    const menuId = menuChip.id || menuChip.generatedAt || `menu-${Date.now()}`;
+    setSavingMenuId(menuId);
+
+    try {
+      const stored = await addSavedMenu({
+        ...menuChip,
+        id: menuId,
+        savedAt: new Date().toISOString(),
+      });
+      setSavedMenus(stored);
+      Alert.alert("Cardápio salvo", "Ele agora aparece no seu perfil, na aba Cardápios.");
+    } catch (err) {
+      console.warn("Erro ao salvar cardápio", err);
+      Alert.alert("Erro", "Não foi possível salvar o cardápio agora. Tente novamente.");
+    } finally {
+      setSavingMenuId(null);
+    }
+  }, []);
 
   const handleQuickPrompt = (prompt) => {
     const replacements = {
       "{range}": selectedRange,
       "{prioritized}": prioritized.join(", "),
       "{tempo}": `${timePerMeal} min`,
-      "{pantry}": PANTRY_ITEMS.map((p) => p.name).join(", "),
+      "{pantry}": pantryItems.map((p) => p.name).join(", "),
       "{meals}": selectedMeals.join(", "),
       "{macros}": `${macroTarget.kcal} kcal / ${macroTarget.protein}g proteína`,
     };
@@ -542,14 +732,28 @@ export default function CardapioBotScreen({ navigation }) {
     const content = text.trim();
     if (!content) return;
 
-    const userMsg = { id: String(Date.now()), role: "user", text: content };
-    setMessages((prev) => [...prev, userMsg, { id: "typing", role: "bot", isTyping: true }]);
+    const baseId = Date.now();
+    const userMsg = { id: String(baseId), role: "user", text: content };
+    const shouldUseManualContext = useManualContext;
+    const promptContext = shouldUseManualContext ? requestContext : defaultContext;
+    const prompt = buildPrompt(content, promptContext);
+    const requestBody = {
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.7, topP: 0.95, topK: 40, maxOutputTokens: 9000 },
+    };
+    const debugMsg = {
+      id: `${baseId}-debug`,
+      role: "bot",
+      text: `DEBUG Gemini payload:\n${JSON.stringify(requestBody, null, 2)}`,
+    };
+
+    setMessages((prev) => [...prev, userMsg, debugMsg, { id: "typing", role: "bot", isTyping: true }]);
     setText("");
     setShowEmoji(false);
     scrollToEnd();
 
     try {
-      const reply = await callGemini(buildPrompt(content, requestContext));
+      const reply = await callGemini(requestBody);
       await finishWithParsedMenu(parseMenuChip(reply), { userText: content });
     } catch (e) {
       console.warn("CardapioBot", e);
@@ -561,12 +765,24 @@ export default function CardapioBotScreen({ navigation }) {
           isFallback: true,
         });
       } else {
+        // Mensagem de erro mais específica
+        let errorMessage = "Ops! Não consegui falar com o Gemini agora.";
+
+        if (e.message?.includes("503")) {
+          errorMessage = "😔 O servidor do Gemini está sobrecarregado no momento. Por favor, aguarde alguns minutos e tente novamente.";
+        } else if (e.message?.includes("429")) {
+          errorMessage = "⏱️ Você atingiu o limite de requisições. Aguarde um momento antes de tentar novamente.";
+        } else if (e.message?.includes("401") || e.message?.includes("403")) {
+          errorMessage = "🔑 Erro de autenticação. Verifique sua chave API (GEMINI_API_KEY).";
+        } else if (e.message?.includes("network") || e.message?.includes("fetch")) {
+          errorMessage = "📡 Erro de conexão com a internet. Verifique sua rede e tente novamente.";
+        }
+
         const botErr = {
           id: String(Date.now() + 1),
           role: "bot",
           error: true,
-          text:
-            "Ops! Não consegui falar com o Gemini agora. Verifique sua conexão e sua chave (GEMINI_API_KEY) e tente novamente.",
+          text: errorMessage,
         };
         setMessages((prev) => prev.filter((m) => m.id !== "typing").concat(botErr));
       }
@@ -575,205 +791,6 @@ export default function CardapioBotScreen({ navigation }) {
     }
   };
 
-  const renderHeader = useCallback(
-    () => (
-      <View style={styles.listHeader}>
-      <View style={styles.heroCard}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.heroEyebrow}>Assistente IA</Text>
-          <Text style={styles.heroTitle}>Oi, {PROFILE_SNAPSHOT.name.split(" ")[0]}!</Text>
-          <Text style={styles.heroSubtitle}>
-            Conte o que precisa e eu gero um cardápio completo seguindo preferências, estoque e metas.
-          </Text>
-        </View>
-        <InfoBadge label="Modelo" value={GEMINI_MODEL} compact />
-      </View>
-
-      <Section title="Resumo rápido" description="Dados vindos do perfil e onboarding.">
-        <View style={styles.badgeRow}>
-          <InfoBadge label="Estilo alimentar" value={PROFILE_SNAPSHOT.dietaryStyle.join(", ")} />
-          <InfoBadge label="Alergias" value={PROFILE_SNAPSHOT.allergies.join(" • ")} variant="warning" />
-        </View>
-        <View style={styles.badgeRow}>
-          <InfoBadge label="Metas" value={PROFILE_SNAPSHOT.goals.join(", ")} />
-          <InfoBadge label="Meta calórica" value={`${PROFILE_SNAPSHOT.macros.kcal} kcal`} />
-        </View>
-      </Section>
-
-      {lastMenuChip && (
-        <Section title="Último cardápio gerado" description="Use como referência para manter consistência.">
-          <Text style={styles.lastMenuTitle}>{lastMenuChip.title}</Text>
-          {lastMenuChip.dateRange && (
-            <Text style={styles.lastMenuRange}>{lastMenuChip.dateRange}</Text>
-          )}
-          <Text style={styles.lastMenuStamp}>
-            Atualizado em {new Date(lastMenuChip.generatedAt).toLocaleString("pt-BR")}
-          </Text>
-          <View style={styles.badgeRow}>
-            {(lastMenuChip.data?.constraints?.diet || []).map((item) => (
-              <Chip key={item} label={item} selected />
-            ))}
-          </View>
-          {lastMenuChip.pdfUri && (
-            <PdfAttachment
-              name={lastMenuChip.pdfName || lastMenuChip.title}
-              onDownload={() => sharePdf(lastMenuChip.pdfUri, lastMenuChip.pdfName || lastMenuChip.title)}
-            />
-          )}
-        </Section>
-      )}
-
-      <Section title="Itens para priorizar" description="Aproveite antes de vencer.">
-        {EXPIRING_ITEMS.map((item) => (
-          <View key={item.id} style={styles.expiringRow}>
-            <Text style={styles.expiringName}>{item.name}</Text>
-            <Text style={styles.expiringTag}>{item.expiresIn}</Text>
-          </View>
-        ))}
-      </Section>
-
-      <Section title="Despensa disponível" description="O CardapioBot dá preferência a esses itens.">
-        <View style={styles.pantryGrid}>
-          {PANTRY_ITEMS.map((item) => (
-            <View key={item.id} style={styles.pantryPill}>
-              <Text style={styles.pantryName}>{item.name}</Text>
-              <Text style={styles.pantryMeta}>{item.quantity} • {item.location}</Text>
-            </View>
-          ))}
-        </View>
-      </Section>
-
-      <Section title="Período e refeições" description="Selecione dias e refeições desejados.">
-        <Text style={styles.sectionLabel}>Período</Text>
-        <View style={styles.pillRow}>
-          {RANGE_OPTIONS.map((option) => (
-            <Chip key={option} label={option} selected={selectedRange === option} onPress={() => setSelectedRange(option)} />
-          ))}
-        </View>
-
-        <Text style={styles.sectionLabel}>Refeições</Text>
-        <View style={styles.pillRow}>
-          {MEAL_OPTIONS.map((meal) => (
-            <Chip
-              key={meal}
-              label={meal}
-              selected={selectedMeals.includes(meal)}
-              onPress={() => toggleSelection(meal, setSelectedMeals)}
-            />
-          ))}
-        </View>
-      </Section>
-
-      <Section title="Preferências & restrições" description="Atualize quando algo mudar.">
-        <Text style={styles.sectionLabel}>Estilo alimentar</Text>
-        <View style={styles.pillRow}>
-          {DIET_OPTIONS.map((diet) => (
-            <Chip
-              key={diet}
-              label={diet}
-              selected={dietTags.includes(diet)}
-              onPress={() => toggleSelection(diet, setDietTags)}
-            />
-          ))}
-        </View>
-
-        <Text style={styles.sectionLabel}>Alergias / restrições</Text>
-        <TextInput
-          style={[styles.textArea, { marginBottom: 8 }]}
-          value={allergyNotes}
-          onChangeText={setAllergyNotes}
-          placeholder="Ex.: lactose severa; evitar camarão"
-        />
-
-        <Text style={styles.sectionLabel}>Observações adicionais</Text>
-        <TextInput
-          style={styles.textArea}
-          value={contextNotes}
-          onChangeText={setContextNotes}
-          placeholder="Preferências, eventos, convidados..."
-          multiline
-        />
-      </Section>
-
-      <Section title="Macros, metas e orçamento" description="Os valores alimentam o prompt automaticamente.">
-        <View style={styles.inputsRow}>
-          <LabeledInput label="Porções" value={servings} onChangeText={setServings} keyboardType="numeric" style={{ flex: 1 }} />
-          <LabeledInput label="Orçamento semanal (R$)" value={budget} onChangeText={setBudget} keyboardType="numeric" style={{ flex: 1.2 }} />
-          <LabeledInput label="Tempo por refeição (min)" value={timePerMeal} onChangeText={setTimePerMeal} keyboardType="numeric" style={{ flex: 1.2 }} />
-        </View>
-
-        <Text style={[styles.sectionLabel, { marginTop: 10 }]}>Meta de macros</Text>
-        <View style={styles.inputsRow}>
-          <LabeledInput label="Kcal" value={macroTarget.kcal} onChangeText={(v) => handleMacroChange("kcal", v)} keyboardType="numeric" />
-          <LabeledInput label="Proteína (g)" value={macroTarget.protein} onChangeText={(v) => handleMacroChange("protein", v)} keyboardType="numeric" />
-        </View>
-        <View style={styles.inputsRow}>
-          <LabeledInput label="Carbo (g)" value={macroTarget.carbs} onChangeText={(v) => handleMacroChange("carbs", v)} keyboardType="numeric" />
-          <LabeledInput label="Gordura (g)" value={macroTarget.fat} onChangeText={(v) => handleMacroChange("fat", v)} keyboardType="numeric" />
-        </View>
-
-        <Text style={styles.sectionLabel}>Objetivo da semana</Text>
-        <TextInput
-          style={styles.textArea}
-          value={goal}
-          onChangeText={setGoal}
-          placeholder="Ex.: Montar marmitas para treino matinal"
-        />
-      </Section>
-
-      <Section title="Equipamentos e culinárias" description="Ajuda o bot a respeitar estrutura da cozinha.">
-        <Text style={styles.sectionLabel}>Equipamentos disponíveis</Text>
-        <View style={styles.pillRow}>
-          {EQUIPMENT_OPTIONS.map((item) => (
-            <Chip
-              key={item}
-              label={item}
-              selected={selectedEquipment.includes(item)}
-              onPress={() => toggleSelection(item, setSelectedEquipment)}
-            />
-          ))}
-        </View>
-
-        <Text style={styles.sectionLabel}>Culinárias desejadas</Text>
-        <View style={styles.pillRow}>
-          {CUISINE_OPTIONS.map((item) => (
-            <Chip
-              key={item}
-              label={item}
-              selected={selectedOrigins.includes(item)}
-              onPress={() => toggleSelection(item, setSelectedOrigins)}
-            />
-          ))}
-        </View>
-
-        <Text style={styles.sectionLabel}>Itens que quero priorizar</Text>
-        <View style={styles.pillRow}>
-          {PRIORITY_OPTIONS.map((item) => (
-            <Chip
-              key={item}
-              label={item}
-              selected={prioritized.includes(item)}
-              onPress={() => toggleSelection(item, setPrioritized)}
-            />
-          ))}
-        </View>
-      </Section>
-
-      <Section title="Atalhos de pedido" description="Clique para preencher a mensagem automaticamente.">
-        <View style={styles.quickPromptRow}>
-          {QUICK_PROMPTS.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.quickPrompt} onPress={() => handleQuickPrompt(item.prompt)}>
-              <Ionicons name="flash-outline" size={14} color={colors.primary} />
-              <Text style={styles.quickPromptText}>{item.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </Section>
-    </View>
-    ),
-    [selectedRange, selectedMeals, dietTags, allergyNotes, contextNotes, servings, budget, timePerMeal, macroTarget, goal, selectedEquipment, selectedOrigins, prioritized, lastMenuChip, sharePdf]
-  );
-
   const sharePdf = useCallback(async (uri, name = "Cardápio em PDF") => {
     if (!uri) {
       Alert.alert("PDF", "Não há arquivo disponível ainda. Gere um novo cardápio.");
@@ -781,26 +798,351 @@ export default function CardapioBotScreen({ navigation }) {
     }
 
     try {
+      const finalName = name?.toLowerCase?.().endsWith(".pdf") ? name : `${name || "cardapio"}.pdf`;
+
+      if (Platform.OS === "web") {
+        const hasDocument = typeof document !== "undefined";
+        if (hasDocument) {
+          const downloadLink = document.createElement("a");
+          const response = await fetch(uri);
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          downloadLink.href = url;
+          downloadLink.download = finalName;
+          downloadLink.style.display = "none";
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+          URL.revokeObjectURL(url);
+        } else if (typeof window !== "undefined") {
+          window.open(uri, "_blank");
+        } else {
+          Alert.alert("PDF gerado", `${finalName}\n${uri}`);
+        }
+        return;
+      }
+
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, {
           mimeType: "application/pdf",
-          dialogTitle: name,
+          dialogTitle: finalName,
         });
       } else {
-        Alert.alert("PDF gerado", `${name}\n${uri}`);
+        Alert.alert("PDF gerado", `${finalName}\n${uri}`);
       }
     } catch (err) {
       Alert.alert("Erro", "Não foi possível abrir/compartilhar o PDF.");
     }
   }, []);
 
+  const handleGeneratePdf = useCallback(
+    async (menuChip, messageId) => {
+      if (!menuChip) return;
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, generatingPdf: true, error: false } : m
+        )
+      );
+
+      try {
+        const pdfFile = await generateMenuPdf(menuChip);
+
+        if (Platform.OS === "web") {
+          Alert.alert("PDF", "Cardápio preparado! Verifique seus downloads.");
+        } else if (pdfFile?.uri) {
+          await sharePdf(pdfFile.uri, pdfFile.name);
+        }
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId
+              ? {
+                  ...m,
+                  generatingPdf: false,
+                  showPdfButton: false,
+                  text: "PDF gerado! Confira seus downloads.",
+                }
+              : m
+          )
+        );
+      } catch (err) {
+        console.warn("Erro ao gerar PDF:", err);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId
+              ? {
+                  ...m,
+                  generatingPdf: false,
+                  error: true,
+                  text: "Erro ao gerar o PDF. Tente novamente.",
+                }
+              : m
+          )
+        );
+      }
+    },
+    [sharePdf]
+  );
+
+  const renderManualContext = useCallback(
+    () => (
+      <View style={styles.manualContextWrapper}>
+        <ScrollView
+          nestedScrollEnabled
+          contentContainerStyle={styles.manualContextScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.heroCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.heroEyebrow}>Assistente IA</Text>
+              <Text style={styles.heroTitle}>Oi, {PROFILE_SNAPSHOT.name.split(" ")[0]}!</Text>
+              <Text style={styles.heroSubtitle}>
+                Conte o que precisa e eu gero um cardápio completo seguindo preferências, estoque e metas.
+              </Text>
+            </View>
+            <InfoBadge label="Modelo" value={GEMINI_MODEL} compact />
+          </View>
+
+          <Section title="Resumo rápido" description="Dados vindos do perfil e onboarding.">
+            <View style={styles.badgeRow}>
+              <InfoBadge label="Estilo alimentar" value={PROFILE_SNAPSHOT.dietaryStyle.join(", ")} />
+              <InfoBadge label="Alergias" value={PROFILE_SNAPSHOT.allergies.join(" • ")} variant="warning" />
+            </View>
+            <View style={styles.badgeRow}>
+              <InfoBadge label="Metas" value={PROFILE_SNAPSHOT.goals.join(", ")} />
+              <InfoBadge label="Meta calórica" value={`${PROFILE_SNAPSHOT.macros.kcal} kcal`} />
+            </View>
+          </Section>
+
+          {lastMenuChip && (
+            <Section title="Último cardápio gerado" description="Use como referência para manter consistência.">
+              <Text style={styles.lastMenuTitle}>{lastMenuChip.title}</Text>
+              {lastMenuChip.dateRange && <Text style={styles.lastMenuRange}>{lastMenuChip.dateRange}</Text>}
+              <Text style={styles.lastMenuStamp}>
+                Atualizado em {new Date(lastMenuChip.generatedAt).toLocaleString("pt-BR")}
+              </Text>
+              <View style={styles.badgeRow}>
+                {(lastMenuChip.data?.constraints?.diet || []).map((item) => (
+                  <Chip key={item} label={item} selected />
+                ))}
+              </View>
+            </Section>
+          )}
+
+          <Section title="Itens para priorizar" description="Aproveite antes de vencer.">
+            {expiringItems.length ? (
+              expiringItems.map((item) => (
+                <View key={item.id} style={styles.expiringRow}>
+                  <Text style={styles.expiringName}>{item.name}</Text>
+                  {!!item.expiresIn && <Text style={styles.expiringTag}>{item.expiresIn}</Text>}
+                </View>
+              ))
+            ) : (
+              <Text style={styles.helperText}>Nenhum item com vencimento próximo.</Text>
+            )}
+          </Section>
+
+          <Section title="Estoque enviado para o Gemini" description="Edite a lista ou escreva novos itens.">
+            <TextInput
+              style={[styles.textArea, styles.pantryEditor]}
+              value={editablePantryText}
+              onChangeText={(value) => {
+                setPantryTextDirty(true);
+                setEditablePantryText(value);
+              }}
+              multiline
+              scrollEnabled
+              textAlignVertical="top"
+              placeholder="Peito de frango - 1,2 kg - Freezer"
+            />
+            <Text style={styles.helperText}>Formato sugerido: ingrediente - quantidade - local (um por linha).</Text>
+            <View style={styles.pantryGrid}>
+              {(pantryItems.length ? pantryItems : SAMPLE_PANTRY_PLACEHOLDER).map((item) => {
+                const qty =
+                  typeof item.quantity === "string"
+                    ? item.quantity
+                    : item.quantity
+                    ? String(item.quantity)
+                    : null;
+                return (
+                  <View key={item.id} style={styles.pantryPill}>
+                    <Text style={styles.pantryName}>{item.name}</Text>
+                    <Text style={styles.pantryMeta}>
+                      {qty || "Qtd. não informada"} • {item.location || "Local não informado"}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Section>
+
+          <Section title="Período e refeições" description="Selecione dias e refeições desejados.">
+            <Text style={styles.sectionLabel}>Período</Text>
+            <View style={styles.pillRow}>
+              {RANGE_OPTIONS.map((option) => (
+                <Chip key={option} label={option} selected={selectedRange === option} onPress={() => setSelectedRange(option)} />
+              ))}
+            </View>
+
+            <Text style={styles.sectionLabel}>Refeições</Text>
+            <View style={styles.pillRow}>
+              {MEAL_OPTIONS.map((meal) => (
+                <Chip
+                  key={meal}
+                  label={meal}
+                  selected={selectedMeals.includes(meal)}
+                  onPress={() => toggleSelection(meal, setSelectedMeals)}
+                />
+              ))}
+            </View>
+          </Section>
+
+          <Section title="Preferências & restrições" description="Atualize quando algo mudar.">
+            <Text style={styles.sectionLabel}>Estilo alimentar</Text>
+            <View style={styles.pillRow}>
+              {DIET_OPTIONS.map((diet) => (
+                <Chip
+                  key={diet}
+                  label={diet}
+                  selected={dietTags.includes(diet)}
+                  onPress={() => toggleSelection(diet, setDietTags)}
+                />
+              ))}
+            </View>
+
+            <Text style={styles.sectionLabel}>Alergias / restrições</Text>
+            <TextInput
+              style={[styles.textArea, { marginBottom: 8 }]}
+              value={allergyNotes}
+              onChangeText={setAllergyNotes}
+              placeholder="Ex.: lactose severa; evitar camarão"
+            />
+
+            <Text style={styles.sectionLabel}>Observações adicionais</Text>
+            <TextInput
+              style={styles.textArea}
+              value={contextNotes}
+              onChangeText={setContextNotes}
+              placeholder="Preferências, eventos, convidados..."
+              multiline
+            />
+          </Section>
+
+          <Section title="Macros, metas e orçamento" description="Os valores alimentam o prompt automaticamente.">
+            <View style={styles.inputsRow}>
+              <LabeledInput label="Porções" value={servings} onChangeText={setServings} keyboardType="numeric" style={{ flex: 1 }} />
+              <LabeledInput label="Orçamento semanal (R$)" value={budget} onChangeText={setBudget} keyboardType="numeric" style={{ flex: 1.2 }} />
+              <LabeledInput label="Tempo por refeição (min)" value={timePerMeal} onChangeText={setTimePerMeal} keyboardType="numeric" style={{ flex: 1.2 }} />
+            </View>
+
+            <Text style={[styles.sectionLabel, { marginTop: 10 }]}>Meta de macros</Text>
+            <View style={styles.inputsRow}>
+              <LabeledInput label="Kcal" value={macroTarget.kcal} onChangeText={(v) => handleMacroChange("kcal", v)} keyboardType="numeric" />
+              <LabeledInput label="Proteína (g)" value={macroTarget.protein} onChangeText={(v) => handleMacroChange("protein", v)} keyboardType="numeric" />
+            </View>
+            <View style={styles.inputsRow}>
+              <LabeledInput label="Carbo (g)" value={macroTarget.carbs} onChangeText={(v) => handleMacroChange("carbs", v)} keyboardType="numeric" />
+              <LabeledInput label="Gordura (g)" value={macroTarget.fat} onChangeText={(v) => handleMacroChange("fat", v)} keyboardType="numeric" />
+            </View>
+
+            <Text style={styles.sectionLabel}>Objetivo da semana</Text>
+            <TextInput
+              style={styles.textArea}
+              value={goal}
+              onChangeText={setGoal}
+              placeholder="Ex.: Montar marmitas para treino matinal"
+            />
+          </Section>
+
+          <Section title="Equipamentos e culinárias" description="Ajuda o bot a respeitar estrutura da cozinha.">
+            <Text style={styles.sectionLabel}>Equipamentos disponíveis</Text>
+            <View style={styles.pillRow}>
+              {EQUIPMENT_OPTIONS.map((item) => (
+                <Chip
+                  key={item}
+                  label={item}
+                  selected={selectedEquipment.includes(item)}
+                  onPress={() => toggleSelection(item, setSelectedEquipment)}
+                />
+              ))}
+            </View>
+
+            <Text style={styles.sectionLabel}>Culinárias desejadas</Text>
+            <View style={styles.pillRow}>
+              {CUISINE_OPTIONS.map((item) => (
+                <Chip
+                  key={item}
+                  label={item}
+                  selected={selectedOrigins.includes(item)}
+                  onPress={() => toggleSelection(item, setSelectedOrigins)}
+                />
+              ))}
+            </View>
+
+            <Text style={styles.sectionLabel}>Itens que quero priorizar</Text>
+            <View style={styles.pillRow}>
+              {PRIORITY_OPTIONS.map((item) => (
+                <Chip
+                  key={item}
+                  label={item}
+                  selected={prioritized.includes(item)}
+                  onPress={() => toggleSelection(item, setPrioritized)}
+                />
+              ))}
+            </View>
+          </Section>
+
+          <Section title="Atalhos de pedido" description="Clique para preencher a mensagem automaticamente.">
+            <View style={styles.quickPromptRow}>
+              {QUICK_PROMPTS.map((item) => (
+                <TouchableOpacity key={item.id} style={styles.quickPrompt} onPress={() => handleQuickPrompt(item.prompt)}>
+                  <Ionicons name="flash-outline" size={14} color={colors.primary} />
+                  <Text style={styles.quickPromptText}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Section>
+        </ScrollView>
+      </View>
+    ),
+    [
+      selectedRange,
+      selectedMeals,
+      dietTags,
+      allergyNotes,
+      contextNotes,
+      servings,
+      budget,
+      timePerMeal,
+      macroTarget,
+      goal,
+      selectedEquipment,
+      selectedOrigins,
+      prioritized,
+      lastMenuChip,
+      expiringItems,
+      pantryItems,
+      editablePantryText,
+      handleQuickPrompt,
+    ]
+  );
+
   const renderItem = useCallback(
     ({ item }) => {
       if (item.isTyping) return <TypingRow />;
-      if (item.menuChip) return <MenuRow menuChip={item.menuChip} onSharePdf={sharePdf} />;
-      return <MessageRow item={item} onSharePdf={sharePdf} />;
+      if (item.menuChip)
+        return (
+          <MenuRow
+            menuChip={item.menuChip}
+            onSaveMenu={handleSaveMenu}
+            isSaved={savedMenuIds.has(item.menuChip.id)}
+            saving={savingMenuId === item.menuChip.id}
+          />
+        );
+      return <MessageRow item={item} onGeneratePdf={handleGeneratePdf} />;
     },
-    [sharePdf]
+    [handleSaveMenu, savedMenuIds, savingMenuId, handleGeneratePdf]
   );
 
   const handleMacroChange = (field, value) => setMacroTarget((prev) => ({ ...prev, [field]: value }));
@@ -819,22 +1161,10 @@ export default function CardapioBotScreen({ navigation }) {
     }
 
     if (menuChipToUse) {
-      let pdfFile;
-      let pdfFailed = false;
-      try {
-        pdfFile = await generateMenuPdf(menuChipToUse);
-      } catch (err) {
-        pdfFailed = true;
-        console.warn("Falha ao gerar PDF:", err);
-      }
-
-      const pdfUri = pdfFile?.uri;
-      const pdfName = pdfFile?.name;
-
+      const menuId = menuChipToUse.id || `menu-${baseId}`;
       const enrichedChip = {
         ...menuChipToUse,
-        pdfUri,
-        pdfName,
+        id: menuId,
         generatedAt: new Date().toISOString(),
       };
       setLastMenuChip(enrichedChip);
@@ -851,22 +1181,14 @@ export default function CardapioBotScreen({ navigation }) {
         });
       }
 
-      if (pdfUri) {
-        extraMsgs.push({
-          id: String(msgIdCursor++),
-          role: "bot",
-          text: `Cardápio salvo em PDF: ${pdfName || enrichedChip.title}`,
-          pdfUri,
-          pdfName,
-        });
-      } else if (pdfFailed) {
-        extraMsgs.push({
-          id: String(msgIdCursor++),
-          role: "bot",
-          error: true,
-          text: "Cardápio gerado, mas não consegui criar o PDF automaticamente. Veja o resumo acima e tente novamente.",
-        });
-      }
+      // Adicionar mensagem com botão para gerar PDF
+      extraMsgs.push({
+        id: String(msgIdCursor++),
+        role: "bot",
+        text: "Cardápio gerado com sucesso! 🎉",
+        showPdfButton: true,
+        menuChipForPdf: enrichedChip,
+      });
 
       setMessages((prev) => prev.filter((m) => m.id !== "typing").concat(baseMsg, menuMsg, ...extraMsgs));
     } else {
@@ -883,6 +1205,24 @@ export default function CardapioBotScreen({ navigation }) {
   return (
     <SafeScreen edges={["top", "bottom"]}>
       <View style={styles.screen}>
+        {/* Caixa de Personalização */}
+        <View style={styles.manualToggleRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.customizationHeaderText}>Contexto personalizado</Text>
+            <Text style={styles.customizationHelper}>
+              Ative para editar manualmente o contexto enviado ao Gemini.
+            </Text>
+          </View>
+          <Switch
+            value={useManualContext}
+            onValueChange={setUseManualContext}
+            trackColor={{ false: "#d4d4d8", true: colors.primary }}
+            thumbColor="#fff"
+          />
+        </View>
+
+        {useManualContext && renderManualContext()}
+
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -905,7 +1245,6 @@ export default function CardapioBotScreen({ navigation }) {
               windowSize={6}
               removeClippedSubviews
               onContentSizeChange={scrollToEnd}
-              ListHeaderComponent={renderHeader}
             />
 
             {showEmoji && (
@@ -992,15 +1331,22 @@ const TypingRow = React.memo(() => (
 ));
 TypingRow.displayName = "TypingRow";
 
-const MenuRow = React.memo(({ menuChip, onSharePdf }) => (
+const MenuRow = React.memo(({ menuChip, onSaveMenu, isSaved, saving }) => (
   <View style={[styles.row, styles.left]}>
-    <MenuPreview menuChip={menuChip} onSharePdf={onSharePdf} />
+    <MenuPreview
+      menuChip={menuChip}
+      onSaveMenu={onSaveMenu}
+      isSaved={isSaved}
+      isSaving={saving}
+    />
   </View>
 ));
 MenuRow.displayName = "MenuRow";
 
-const MessageRow = React.memo(({ item, onSharePdf }) => {
-  const isPdf = !!item.pdfUri;
+const MessageRow = React.memo(({ item, onGeneratePdf }) => {
+  const showButton = !!item.showPdfButton;
+  const isGenerating = !!item.generatingPdf;
+
   return (
     <View style={[styles.row, item.role === "user" ? styles.right : styles.left]}>
       <View
@@ -1013,35 +1359,28 @@ const MessageRow = React.memo(({ item, onSharePdf }) => {
         {item.role === "bot" && <Text style={styles.botName}>CardapioBot</Text>}
         {!!item.text && <Text style={styles.msgText}>{item.text}</Text>}
 
-        {isPdf && (
-          <PdfAttachment
-            name={item.pdfName || "cardapio.pdf"}
-            onDownload={() => onSharePdf(item.pdfUri, item.pdfName || "cardapio.pdf")}
-          />
+        {showButton && (
+          <TouchableOpacity
+            style={styles.pdfGenerateButton}
+            onPress={() => onGeneratePdf?.(item.menuChipForPdf, item.id)}
+            disabled={isGenerating}
+            activeOpacity={0.8}
+          >
+            {isGenerating ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Ionicons name="download-outline" size={18} color="#fff" />
+                <Text style={styles.pdfGenerateButtonText}>Baixar cardápio em PDF</Text>
+              </>
+            )}
+          </TouchableOpacity>
         )}
       </View>
     </View>
   );
 });
 MessageRow.displayName = "MessageRow";
-
-const PdfAttachment = React.memo(({ name, onDownload }) => (
-  <View style={styles.pdfCard}>
-    <View style={styles.pdfInfo}>
-      <Ionicons name="document-text-outline" size={20} color="#065f46" />
-      <View>
-        <Text style={styles.pdfName} numberOfLines={1}>
-          {name || "cardapio.pdf"}
-        </Text>
-        <Text style={styles.pdfHint}>Toque para baixar</Text>
-      </View>
-    </View>
-    <TouchableOpacity style={styles.pdfButton} onPress={onDownload} activeOpacity={0.9}>
-      <Text style={styles.pdfButtonText}>Baixar</Text>
-    </TouchableOpacity>
-  </View>
-));
-PdfAttachment.displayName = "PdfAttachment";
 
 function TypingDots() {
   return (
@@ -1101,9 +1440,9 @@ function extractMenuDays(data) {
   return [];
 }
 
-function MenuPreview({ menuChip, onSharePdf }) {
-  const days = extractMenuDays(menuChip.data).slice(0, 3);
-  const shopping = Array.isArray(menuChip.data?.shoppingList) ? menuChip.data.shoppingList.slice(0, 2) : [];
+function MenuPreview({ menuChip, onSaveMenu, isSaved, isSaving }) {
+  const days = extractMenuDays(menuChip.data);
+  const shopping = Array.isArray(menuChip.data?.shoppingList) ? menuChip.data.shoppingList : [];
   const assumptions = Array.isArray(menuChip.data?.assumptions) ? menuChip.data.assumptions : [];
   const constraints = menuChip.data?.constraints || {};
 
@@ -1127,7 +1466,7 @@ function MenuPreview({ menuChip, onSharePdf }) {
       {days.map((day) => (
         <View key={day.dia} style={styles.menuDay}>
           <Text style={styles.menuDayTitle}>{day.dia}</Text>
-          {(day.refeicoes || []).slice(0, 3).map((meal) => (
+          {(day.refeicoes || []).map((meal) => (
             <View key={`${day.dia}-${meal.nome}`} style={styles.menuMeal}>
               <Text style={styles.menuMealTitle}>{meal.nome}</Text>
               <Text style={styles.menuMealText}>{(meal.itens || []).join(" • ")}</Text>
@@ -1138,13 +1477,12 @@ function MenuPreview({ menuChip, onSharePdf }) {
 
       {shopping.length > 0 && (
         <View style={styles.shoppingBlock}>
-          <Text style={styles.menuSectionLabel}>Lista de compras (resumo)</Text>
+          <Text style={styles.menuSectionLabel}>Lista de compras</Text>
           {shopping.map((group) => (
             <View key={group.categoria} style={styles.shoppingRow}>
               <Text style={styles.shoppingCategory}>{group.categoria}</Text>
               <Text style={styles.shoppingItems}>
-                {(group.itens || []).slice(0, 2).map((item) => item.nome).join(", ")}
-                {group.itens?.length > 2 ? " +" : ""}
+                {(group.itens || []).map((item) => item.nome).join(", ")}
               </Text>
             </View>
           ))}
@@ -1154,18 +1492,42 @@ function MenuPreview({ menuChip, onSharePdf }) {
       {assumptions.length > 0 && (
         <View style={{ marginTop: 12 }}>
           <Text style={styles.menuSectionLabel}>Assunções</Text>
-          {assumptions.slice(0, 3).map((item, idx) => (
+          {assumptions.map((item, idx) => (
             <Text key={idx} style={styles.assumptionText}>• {item}</Text>
           ))}
         </View>
       )}
 
-      {menuChip.pdfUri && (
-        <PdfAttachment
-          name={menuChip.pdfName || menuChip.title}
-          onDownload={() => onSharePdf(menuChip.pdfUri, menuChip.pdfName || menuChip.title)}
-        />
-      )}
+      <View style={styles.menuActions}>
+        <TouchableOpacity
+          style={[
+            styles.saveMenuBtn,
+            (isSaved || isSaving) && styles.saveMenuBtnDisabled,
+            isSaved && styles.saveMenuBtnSaved,
+          ]}
+          onPress={() => onSaveMenu?.(menuChip)}
+          disabled={isSaved || isSaving}
+          activeOpacity={0.9}
+        >
+          {isSaving ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <Ionicons
+                name={isSaved ? "checkmark-circle" : "bookmark-outline"}
+                size={18}
+                color={isSaved ? colors.primary : "#fff"}
+                style={styles.saveMenuIcon}
+              />
+              <Text style={[styles.saveMenuText, isSaved && styles.saveMenuTextSaved]}>
+                {isSaved ? "Cardápio salvo" : "Salvar no perfil"}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+        {isSaved && <Text style={styles.saveMenuHint}>Perfil › Cardápios</Text>}
+      </View>
+
     </View>
   );
 }
@@ -1178,7 +1540,13 @@ Fale sempre português do Brasil, direto e educado. Use medidas do Brasil (g, ml
 ## Objetivo
 Interpretar o pedido do usuário e:
 - **Conversar brevemente** quando for bate-papo.
+- **Responder sobre estoque** quando perguntarem "o que tenho?", "quais itens vencem logo?", "quantas unidades restam?", usando os dados de ctx.pantrySnapshot e ctx.expiringSoon.
 - **Gerar cardápio** quando solicitado (semanal/diário/um período específico), **respeitando** preferências, restrições, alergias, orçamento, tempo, equipamentos, e itens disponíveis na despensa.
+
+## Estoque e interações sem cardápio
+- Se a intenção for apenas consultar ou manipular o estoque, responda com um texto claro, cite os itens relevantes e indique prioridades (ex.: "Peito de frango - 1,2 kg (Freezer)").
+- Destaque itens próximos de vencer e sugira como usá-los, sem criar <MENU>.
+- Observe ctx.contextMode: "auto_stock" significa que só o estoque deve ser levado em conta; "manual_form" indica que o usuário abriu a personalização escrita e quer aqueles ajustes considerados.
 
 ## Regras de planejamento
 - Se faltarem detalhes críticos (ex.: alergia declarada mas sem lista), **assuma padrões seguros** e liste hipóteses em \`assumptions\`.
@@ -1186,12 +1554,17 @@ Interpretar o pedido do usuário e:
 - Se o usuário informar **itens disponíveis (despensa/geladeira)**, **priorize usá-los**.
 - Permita **substituições** (vegano/vegetariano/halal/kosher/sem lactose/sem glúten/low-FODMAP/diabetes/hipertensão/keto/low-carb/high-protein, etc.).
 - Evite ingredientes proibidos e **garanta ausência total** dos alergênicos indicados.
-- **Nunca** entregue um cardápio parcial: se o período solicitado cobrir N dias, preencha \`menu.dias\` com todos os dias do intervalo (Seg-Dom ou o período informado). Se não for possível gerar o período completo, explique ao usuário e peça dados extras em vez de entregar algo incompleto.
+- **CRÍTICO: Nunca** entregue um cardápio parcial:
+  * Se o pedido for "Semana completa (7 dias)", você DEVE gerar EXATAMENTE 7 dias (Segunda a Domingo).
+  * Se o período solicitado cobrir N dias, preencha \`menu.dias\` com TODOS os N dias do intervalo.
+  * NUNCA pare antes de completar todos os dias - mesmo que o limite de tokens esteja próximo, priorize completar o cardápio.
+  * Se não for possível gerar o período completo, explique ao usuário e peça dados extras em vez de entregar algo incompleto.
 - Quando o usuário pedir **alterações específicas** (ex.: "trocar o café da manhã por pão de batata" ou "remover camarão do jantar"), utilize o histórico recente em \`ctx.conversationHistory\` para entender o contexto e **aplique as mudanças em todo o cardápio**. Repita essas mudanças no texto e no JSON, confirmando explicitamente o que foi ajustado.
 - Opcionalmente, faça *batch cooking* (adiantando preparos para a semana) quando fizer sentido.
 - Nutrição: quando pedido, informe **kcal** e **macros** (carbs_g, protein_g, fat_g) por refeição e por dia (estimativas).
 
 ## Quando gerar cardápio (pedido explícito ou implícito):
+Só gere <MENU> quando o usuário pedir explicitamente (ou concordar claramente) com a criação de um cardápio/plano de refeições.
 1) Dê uma resposta curta explicando o racional.
 2) Em seguida, **obrigatoriamente** inclua **um único** bloco \`<MENU>{...}</MENU>\` contendo **JSON válido** (sem comentários, sem \`undefined\`, sem vírgulas sobrando, sem markdown dentro). Use **aspas duplas** nas chaves/valores.
 
@@ -1300,20 +1673,6 @@ function shouldUseDemoCardapio(error) {
     msg.includes("gemini http 4") ||
     msg.includes("gemini http 5")
   );
-}
-
-async function generateMenuPdf(menuChip) {
-  const title = menuChip.title || "CARDÁPIO SEMANAL";
-  const range = menuChip.dateRange ? ` (${menuChip.dateRange})` : "";
-  const html = buildMenuHtml(title, range, menuChip.data);
-  const file = await Print.printToFileAsync({ html });
-
-  const safeTitle = title.replace(/[^\w\- ]+/g, "").replace(/\s+/g, "_");
-  const filename = `${safeTitle}${menuChip.dateRange ? "_" + menuChip.dateRange.replace(/[^\d\-]/g, "") : ""}.pdf`;
-  const dest = FileSystem.documentDirectory + filename;
-
-  await FileSystem.moveAsync({ from: file.uri, to: dest });
-  return { uri: dest, name: filename };
 }
 
 function applyUserOverrides(menuChip, userText, { force = false } = {}) {
@@ -1504,7 +1863,40 @@ function escapeHtml(s) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
-  listHeader: { gap: 16, marginBottom: 24 },
+  manualToggleRow: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: 16,
+  },
+  customizationHeaderText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  customizationHelper: { fontSize: 13, color: colors.mutedText, marginTop: 4 },
+  manualContextWrapper: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#fff",
+    maxHeight: 480,
+    overflow: "hidden",
+  },
+  manualContextScroll: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+    gap: 18,
+  },
 
   heroCard: {
     backgroundColor: colors.primary50,
@@ -1568,6 +1960,8 @@ const styles = StyleSheet.create({
   },
   pantryName: { fontWeight: "600", color: colors.text },
   pantryMeta: { fontSize: 12, color: colors.mutedText, marginTop: 4 },
+  pantryEditor: { minHeight: 110, textAlignVertical: "top" },
+  helperText: { fontSize: 12, color: colors.mutedText, marginTop: 8, marginBottom: 12 },
 
   pillRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
@@ -1738,25 +2132,42 @@ const styles = StyleSheet.create({
   shoppingCategory: { fontSize: 13, fontWeight: "600", color: colors.text },
   shoppingItems: { fontSize: 12, color: colors.mutedText, flex: 1, textAlign: "right", marginLeft: 10 },
   assumptionText: { fontSize: 12, color: colors.mutedText, marginTop: 4 },
-  pdfCard: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#A7F3D0",
-    backgroundColor: "#ECFDF5",
+  menuActions: { marginTop: 8 },
+  saveMenuBtn: {
+    marginTop: 4,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "center",
+    gap: 6,
   },
-  pdfInfo: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
-  pdfName: { fontWeight: "700", color: colors.text, maxWidth: 160 },
-  pdfHint: { fontSize: 12, color: colors.mutedText },
-  pdfButton: {
+  saveMenuBtnDisabled: { opacity: 0.9 },
+  saveMenuBtnSaved: {
+    backgroundColor: "#f0fdf4",
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  saveMenuIcon: { marginRight: 6 },
+  saveMenuText: { color: "#fff", fontWeight: "700" },
+  saveMenuTextSaved: { color: colors.primary },
+  saveMenuHint: { marginTop: 6, fontSize: 11, color: colors.mutedText, textAlign: "center" },
+  pdfGenerateButton: {
+    marginTop: 12,
     backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
-  pdfButtonText: { color: "#fff", fontWeight: "700" },
+  pdfGenerateButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
 });

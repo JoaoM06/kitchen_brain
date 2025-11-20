@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import SafeScreen from "../components/SafeScreen";
 import DefaultInput from "../components/DefaultInput";
@@ -35,7 +36,9 @@ export default function LoginScreen({ navigation }) {
     try {
       setLoading(true);
       const res = await login({ email: email.trim().toLowerCase(), senha: password });
-      // await TokenStore.set(res.access_token);
+      if (res?.access_token) {
+        await AsyncStorage.setItem("auth_token", res.access_token);
+      }
       navigation.navigate("Onboarding");
     } catch (err) {
       const msg =

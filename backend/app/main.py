@@ -8,6 +8,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.settings import router as settings_router
 from app.api.routes.profile import router as profile_router
 from app.api.routes.transcribe import router as transcribe_router
+from app.api.routes.pantry import router as pantry_router
 # from app.api.routes.devices import router as devices_router
 
 # ⚠️ Recomendado usar Alembic. Se você quiser criar tabelas sem migração,
@@ -41,4 +42,5 @@ app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(transcribe_router)
 app.include_router(settings_router, tags=["settings"])
+app.include_router(pantry_router, tags=["pantry"])
 # app.include_router(devices_router, tags=["devices"])

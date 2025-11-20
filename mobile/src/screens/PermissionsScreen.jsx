@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import * as Location from "expo-location";
@@ -18,11 +19,13 @@ import * as Device from "expo-device";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../api/client";
+import SafeScreen from "../components/SafeScreen";
 
 // ====== Ajuste estes valores conforme seu app ======
 const AUTH_TOKEN_KEY = "auth_token";         // onde você salva o JWT
 const DEVICE_ID_KEY  = "device_id";          // onde guardamos o id do device registrado no backend
 const IS_EXPO_GO = Constants.appOwnership === "expo";
+const IS_DEV_MODE = __DEV__ || Platform.OS === "web"; // Modo desenvolvimento/web
 // ===================================================
 
 // Helper para mapear status do SO -> nosso backend
@@ -34,7 +37,7 @@ const mapPerm = (status) => {
   return "denied";
 };
 
-export default function Configs() {
+export default function PermissionsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
 
   // consentimentos (LGPD) do usuário — /me/settings
@@ -162,20 +165,32 @@ export default function Configs() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
+      if (IS_DEV_MODE) {
+        // Modo desenvolvimento/web - usa valores locais
+        const stored = await AsyncStorage.getItem("permissions_consent");
+        if (stored) {
+          setConsent(JSON.parse(stored));
+        }
+        setLoading(false);
+        return;
+      }
+
       const [s, devId] = await Promise.all([
-        fetchJSON("/me/settings"),
-        registerDeviceIfNeeded(),
+        fetchJSON("/me/settings").catch(() => ({})),
+        registerDeviceIfNeeded().catch(() => null),
       ]);
       setConsent((old) => ({ ...old, ...s }));
       setLoading(false); // libera a tela já
 
       // snapshot sem bloquear a UI
-      snapshotAndSendDevicePermissions(devId)
-        .then((p) => p && setPerm((old) => ({ ...old, ...p })))
-        .catch(() => {});
+      if (devId) {
+        snapshotAndSendDevicePermissions(devId)
+          .then((p) => p && setPerm((old) => ({ ...old, ...p })))
+          .catch(() => {});
+      }
     } catch (e) {
       setLoading(false);
-      Alert.alert("Erro", String(e?.message || e));
+      console.warn("Erro ao carregar permissões:", e);
     }
   }, [fetchJSON, registerDeviceIfNeeded, snapshotAndSendDevicePermissions]);
 
@@ -185,11 +200,18 @@ export default function Configs() {
 
   const updateConsent = useCallback(
     async (patch) => {
-      // PATCH /me/settings
       const prev = consent;
       const optimistic = { ...prev, ...patch };
       setConsent(optimistic);
+
       try {
+        if (IS_DEV_MODE) {
+          // Modo desenvolvimento - salva localmente
+          await AsyncStorage.setItem("permissions_consent", JSON.stringify(optimistic));
+          return;
+        }
+
+        // PATCH /me/settings
         const s = await fetchJSON("/me/settings", {
           method: "PATCH",
           body: JSON.stringify(patch),
@@ -198,7 +220,9 @@ export default function Configs() {
       } catch (e) {
         // rollback se falhar
         setConsent(prev);
-        Alert.alert("Erro", String(e?.message || e));
+        if (!IS_DEV_MODE) {
+          Alert.alert("Erro", String(e?.message || e));
+        }
       }
     },
     [consent, fetchJSON]
@@ -320,61 +344,104 @@ export default function Configs() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 10 }}>Carregando permissões…</Text>
-      </View>
+      <SafeScreen>
+        <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+          <ActivityIndicator size="large" />
+          <Text style={{ marginTop: 10 }}>Carregando permissões…</Text>
+        </View>
+      </SafeScreen>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.header}>Permissões</Text>
+    <SafeScreen>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.header}>Permissões</Text>
+        <View style={styles.backButton} />
+      </View>
 
-      {rows.map((row) => {
-        const enabled = !!consent[row.key];
-        const permStatus = row.permKey ? perm[row.permKey] : null;
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
+        {rows.map((row) => {
+          const enabled = !!consent[row.key];
+          const permStatus = row.permKey ? perm[row.permKey] : null;
 
-        const toggle = async (value) => {
-          // 1) Atualiza consentimento (LGPD)
-          await updateConsent({ [row.key]: value });
+          const toggle = async (value) => {
+            // 1) Atualiza consentimento (LGPD)
+            await updateConsent({ [row.key]: value });
 
-          // 2) Se é permissão do SO e usuário ligou, solicita de verdade
-          if (value && row.onRequest) {
-            await row.onRequest();
-          }
-        };
+            // 2) Se é permissão do SO e usuário ligou, solicita de verdade
+            if (value && row.onRequest) {
+              await row.onRequest();
+            }
+          };
 
-        return (
-          <View key={row.key} style={styles.row}>
-            <View style={styles.icon}>{row.icon}</View>
-            <View style={styles.texts}>
-              <Text style={styles.title}>{row.title}</Text>
-              <Text style={styles.desc}>{row.desc}</Text>
-              {permStatus && (
-                <Text style={styles.perm}>
-                  Status do sistema: <Text style={styles.permBold}>{permStatus}</Text>
-                </Text>
-              )}
+          return (
+            <View key={row.key} style={styles.row}>
+              <View style={styles.icon}>{row.icon}</View>
+              <View style={styles.texts}>
+                <Text style={styles.title}>{row.title}</Text>
+                <Text style={styles.desc}>{row.desc}</Text>
+                {permStatus && (
+                  <Text style={styles.perm}>
+                    Status do sistema: <Text style={styles.permBold}>{permStatus}</Text>
+                  </Text>
+                )}
+              </View>
+              <Switch value={enabled} onValueChange={toggle} disabled={row.key === "allow_notifications" && IS_EXPO_GO} />
             </View>
-            <Switch value={enabled} onValueChange={toggle} disabled={row.key === "allow_notifications" && IS_EXPO_GO} />
-        </View>
-      );
-    })}
+          );
+        })}
 
-      <View style={{ height: 24 }} />
-    </ScrollView>
+        <View style={{ height: 24 }} />
+      </ScrollView>
+    </SafeScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", paddingTop: 50, paddingHorizontal: 20 },
-  header: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
-  row: { flexDirection: "row", alignItems: "center", paddingVertical: 16 },
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  header: {
+    fontSize: 20,
+    fontWeight: "bold",
+    flex: 1,
+    textAlign: "center",
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  row: { flexDirection: "row", alignItems: "center", paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
   icon: { width: 36, alignItems: "center", marginRight: 12 },
   texts: { flex: 1 },
   title: { fontSize: 16, fontWeight: "700", marginBottom: 4 },
-  desc: { color: "#333", opacity: 0.75 },
+  desc: { color: "#333", opacity: 0.75, fontSize: 13 },
   perm: { marginTop: 6, fontSize: 12, color: "#666" },
   permBold: { fontWeight: "700", color: "#111" },
 });

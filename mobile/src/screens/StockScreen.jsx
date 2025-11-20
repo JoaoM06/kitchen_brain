@@ -5,22 +5,11 @@ import SafeScreen from "../components/SafeScreen";
 import DefaultInput from "../components/DefaultInput";
 import DefaultButton from "../components/DefaultButton";
 import FooterNav from "../components/FooterNav";
-
-const armario = [
-  { id: "a1", name: "Macarrão",   expiry: "25/12", status: "ok" },
-  { id: "a2", name: "Pão de forma", expiry: "24/10", status: "ok" },
-  { id: "a3", name: "Filé Mignon",  expiry: "05/11", status: "ok" },
-  { id: "a4", name: "Farinha Panko", expiry: "13/02", status: "ok" },
-];
-
-const geladeira = [
-  { id: "g1", name: "Ovo",         expiry: "18/10", status: "danger" },
-  { id: "g2", name: "Filé Mignon", expiry: "05/11", status: "ok" },
-  { id: "g3", name: "Leite",       expiry: "21/10", status: "ok" },
-];
+import { getStockSections } from "../data/stock";
 
 export default function StockScreen({ navigation }) {
   const [query, setQuery] = useState("");
+  const sections = getStockSections();
 
   return (
     <SafeScreen>
@@ -51,35 +40,24 @@ export default function StockScreen({ navigation }) {
           Adicionar item
         </DefaultButton>
 
-        <Text style={styles.sectionTitle}>Armário</Text>
-        <View style={styles.card}>
-          {armario
-            .filter(i => i.name.toLowerCase().includes(query.toLowerCase()))
-            .map((item, idx) => (
-              <RowItem
-                key={item.id}
-                name={item.name}
-                expiry={item.expiry}
-                status={item.status}
-                hasDivider={idx < armario.length - 1}
-              />
-          ))}
-        </View>
-
-        <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Geladeira</Text>
-        <View style={styles.card}>
-          {geladeira
-            .filter(i => i.name.toLowerCase().includes(query.toLowerCase()))
-            .map((item, idx) => (
-              <RowItem
-                key={item.id}
-                name={item.name}
-                expiry={item.expiry}
-                status={item.status}
-                hasDivider={idx < geladeira.length - 1}
-              />
-          ))}
-        </View>
+        {sections.map((section, sectionIdx) => (
+          <View key={section.id}>
+            <Text style={[styles.sectionTitle, sectionIdx > 0 && { marginTop: 18 }]}>{section.title}</Text>
+            <View style={styles.card}>
+              {section.items
+                .filter((i) => i.name.toLowerCase().includes(query.toLowerCase()))
+                .map((item, idx) => (
+                  <RowItem
+                    key={item.id}
+                    name={item.name}
+                    expiry={item.expiry}
+                    status={item.status}
+                    hasDivider={idx < section.items.length - 1}
+                  />
+                ))}
+            </View>
+          </View>
+        ))}
 
         <View style={{ height: 90 }} />
       </ScrollView>

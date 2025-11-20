@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm start -- --clear)",
+      "Bash(npx expo install expo-image-picker)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

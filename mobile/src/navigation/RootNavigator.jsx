@@ -15,6 +15,10 @@ import AddItemOptionsScreen from "../screens/AddItemOptionsScreen";
 import BarcodeScannerScreen from "../screens/BarcodeScannerScreen";
 import NovoItemScreen from "../screens/ManualAddScreen";
 import CardapioBotScreen from "../screens/CardapioBotScreen";
+import MenuViewScreen from "../screens/MenuViewScreen";
+import HelpScreen from "../screens/HelpScreen";
+import AboutScreen from "../screens/AboutScreen";
+import AccessibilityScreen from "../screens/AccessibilityScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -40,6 +44,10 @@ export default function RootNavigator() {
         <Stack.Screen name="BarcodeScannerScreen" component={BarcodeScannerScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="NovoItemScreen" component={NovoItemScreen} />
         <Stack.Screen name="CardapioBotScreen" component={CardapioBotScreen} />
+        <Stack.Screen name="MenuView" component={MenuViewScreen} />
+        <Stack.Screen name="Help" component={HelpScreen} />
+        <Stack.Screen name="About" component={AboutScreen} />
+        <Stack.Screen name="Accessibility" component={AccessibilityScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

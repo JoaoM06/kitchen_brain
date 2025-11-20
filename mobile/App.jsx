@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { LogBox } from "react-native";
 import RootNavigator from "./src/navigation/RootNavigator";
+import { AccessibilityProvider } from "./src/AccessibilityContext";
 
 export default function App() {
   useEffect(() => {
@@ -11,5 +12,9 @@ export default function App() {
     ]);
   }, []);
 
-  return <RootNavigator />;
+  return (
+    <AccessibilityProvider>
+      <RootNavigator />
+    </AccessibilityProvider>
+  );
 }
