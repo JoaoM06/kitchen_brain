@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "KitchenBrain",
+    "slug": "KitchenBrain",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/imgs/logo-kitchenbrain.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/imgs/logo-kitchenbrain.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/imgs/logo-kitchenbrain.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/imgs/logo-kitchenbrain.png"
+    },
+    "extra": {
+      "GEMINI_API_KEY": "AIzaSyAH6qpSJoleMZT7XcfkEPK8ThJegPHKjGw"
+    }
+  }
+}

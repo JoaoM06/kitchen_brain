@@ -5,6 +5,7 @@ import { colors } from "../theme/colors";
 export default function FooterNav({ active, onNavigate }) {
   const tabs = [
     { key: "Recipes", icon: "restaurant-outline" },
+    { key: "RecipeHub", icon: "people-circle-outline" },
     { key: "Stock", icon: "cube-outline" },
     { key: "CardapioBotScreen", icon: "stats-chart-outline" },
     { key: "Profile",   icon: "person-outline" },

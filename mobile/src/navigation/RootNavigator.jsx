@@ -19,6 +19,9 @@ import MenuViewScreen from "../screens/MenuViewScreen";
 import HelpScreen from "../screens/HelpScreen";
 import AboutScreen from "../screens/AboutScreen";
 import AccessibilityScreen from "../screens/AccessibilityScreen";
+import MarketMapScreen from "../screens/MarketMapScreen";
+import RecipeHubScreen from "../screens/RecipeHubScreen";
+import RecipeHubCreateScreen from "../screens/RecipeHubCreateScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -48,6 +51,9 @@ export default function RootNavigator() {
         <Stack.Screen name="Help" component={HelpScreen} />
         <Stack.Screen name="About" component={AboutScreen} />
         <Stack.Screen name="Accessibility" component={AccessibilityScreen} />
+        <Stack.Screen name="MarketMap" component={MarketMapScreen} />
+        <Stack.Screen name="RecipeHub" component={RecipeHubScreen} />
+        <Stack.Screen name="RecipeHubCreate" component={RecipeHubCreateScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

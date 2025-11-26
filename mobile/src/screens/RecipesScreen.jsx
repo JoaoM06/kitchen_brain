@@ -44,6 +44,13 @@ export default function RecipesScreen({ navigation }) {
               <Text style={styles.heroPlaceholderText}>Reels em breve</Text>
             </View>
           </View>
+          <Pressable style={styles.hubBanner} onPress={() => navigation.navigate("RecipeHub")}>
+            <View>
+              <Text style={styles.hubTitle}>Conheça o Hub de Receitas</Text>
+              <Text style={styles.hubSubtitle}>Publique, salve e avalie criações da comunidade</Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={32} color="#fff" />
+          </Pressable>
         </View>
 
         <Text style={styles.sectionTitle}>Escolhidas pelo Cubby</Text>
@@ -164,6 +171,27 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.2)",
   },
   heroPlaceholderText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  hubBanner: {
+    marginHorizontal: 24,
+    marginTop: 16,
+    marginBottom: 12,
+    backgroundColor: "#111827",
+    borderRadius: 18,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  hubTitle: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  hubSubtitle: {
+    color: "#D1D5DB",
+    fontSize: 13,
+    marginTop: 4,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",

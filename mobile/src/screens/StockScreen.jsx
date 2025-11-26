@@ -40,6 +40,15 @@ export default function StockScreen({ navigation }) {
           Adicionar item
         </DefaultButton>
 
+        <DefaultButton
+          variant="outline"
+          onPress={() => navigation.navigate("MarketMap")}
+          style={styles.mapBtn}
+          textStyle={styles.mapBtnText}
+        >
+          Encontrar mercados próximos
+        </DefaultButton>
+
         {sections.map((section, sectionIdx) => (
           <View key={section.id}>
             <Text style={[styles.sectionTitle, sectionIdx > 0 && { marginTop: 18 }]}>{section.title}</Text>
@@ -124,6 +133,15 @@ const styles = StyleSheet.create({
     width: "86%",
     marginBottom: 18,
   },
+  mapBtn: {
+    borderRadius: 28,
+    paddingVertical: 14,
+    alignSelf: "center",
+    width: "86%",
+    marginBottom: 18,
+    borderColor: colors.primary,
+  },
+  mapBtnText: { color: colors.primary },
 
   sectionTitle: { fontSize: 22, fontWeight: "800", color: colors.text, marginBottom: 10 },
 
