@@ -1,5 +1,4 @@
-import os
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
 from pydantic import AnyUrl
 
 class Settings(BaseSettings):
@@ -7,11 +6,10 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     BACKEND_CORS_ORIGINS: str = "*"
+    GEMINI_API_KEY: str
+    GEMINI_MODEL_NAME: str = "gemini-2.5-flash"
 
-    # Novo padrão do Pydantic v2
-    model_config = SettingsConfigDict(
-        env_file=os.path.join(os.path.dirname(__file__), "../../.env"),
-        env_file_encoding="utf-8"
-    )
+    class Config:
+        env_file = ".env"
 
 settings = Settings()
