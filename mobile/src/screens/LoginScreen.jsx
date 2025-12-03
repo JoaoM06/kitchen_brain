@@ -1,4 +1,3 @@
-// src/screens/LoginScreen.js
 import { useRef, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,7 +9,7 @@ import DefaultButton from "../components/DefaultButton";
 import { colors } from "../theme/colors";
 
 import { login } from "../api/auth";
-// import { TokenStore } from "../api/tokenStore";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -20,6 +19,8 @@ export default function LoginScreen({ navigation }) {
   const [successVisible, setSuccessVisible] = useState(false);
 
   const passwordRef = useRef(null);
+
+  const { signIn } = useAuth();
 
   function validate() {
     if (!email.trim() || !password.trim()) {
@@ -34,9 +35,11 @@ export default function LoginScreen({ navigation }) {
     if (!validate()) return;
     try {
       setLoading(true);
-      const res = await login({ email: email.trim().toLowerCase(), senha: password });
-      // await TokenStore.set(res.access_token);
-      navigation.navigate("Onboarding");
+      await signIn({
+        email: email.trim().toLowerCase(),
+        senha: password,
+      });
+
     } catch (err) {
       const msg =
         (Array.isArray(err?.response?.data?.detail) && err.response.data.detail[0]?.msg) ||
