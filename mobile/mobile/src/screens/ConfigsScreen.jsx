@@ -19,14 +19,12 @@ export default function ConfigsScreen({ navigation }) {
           style: "destructive",
           onPress: async () => {
             try {
-              // Limpa todos os dados do AsyncStorage
               await AsyncStorage.clear();
 
-              // Usa CommonActions para resetar completamente a navegação
               navigation.dispatch(
                 CommonActions.reset({
                   index: 0,
-                  routes: [{ name: 'Login' }],
+                  routes: [{ name: 'Welcome' }],
                 })
               );
             } catch (error) {

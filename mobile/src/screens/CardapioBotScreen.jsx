@@ -1412,8 +1412,21 @@ function Section({ title, description, children }) {
 }
 
 function InfoBadge({ label, value, variant = "default", compact = false }) {
+  if (compact) {
+    return (
+      <View
+        style={[
+          styles.infoBadgeCompact,
+          variant === "warning" && styles.infoBadgeWarning,
+        ]}
+      >
+        <Text style={styles.badgeLabelCompact}>{label}</Text>
+        <Text style={styles.badgeValueCompact}>{value}</Text>
+      </View>
+    );
+  }
   return (
-    <View style={[styles.infoBadge, variant === "warning" && styles.infoBadgeWarning, compact && { flex: 0 }]}>
+    <View style={[styles.infoBadge, variant === "warning" && styles.infoBadgeWarning]}>
       <Text style={styles.badgeLabel}>{label}</Text>
       <Text style={styles.badgeValue}>{value}</Text>
     </View>
@@ -1935,9 +1948,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
+  infoBadgeCompact: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    alignSelf: "flex-start",
+  },
   infoBadgeWarning: { backgroundColor: "#FEF3C7", borderColor: "#FCD34D" },
   badgeLabel: { fontSize: 12, color: colors.mutedText, textTransform: "uppercase", letterSpacing: 0.5 },
+  badgeLabelCompact: { fontSize: 12, fontWeight: "600", color: colors.mutedText, textTransform: "uppercase" },
   badgeValue: { fontSize: 14, fontWeight: "700", color: colors.text, marginTop: 4 },
+  badgeValueCompact: { fontSize: 15, fontWeight: "700", color: colors.text },
 
   expiringRow: {
     flexDirection: "row",
