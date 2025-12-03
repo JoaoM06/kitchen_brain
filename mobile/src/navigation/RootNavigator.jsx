@@ -34,7 +34,6 @@ export default function RootNavigator() {
         <Stack.Screen name="Permissions" component={PermissionsScreen} />
         <Stack.Screen name="VoiceRec" component={VoiceRecScreen} />
         <Stack.Screen name="AddItemOptions" component={AddItemOptionsScreen} />
-        <Stack.Screen name="ManualAddScreen" component={ManualAddScreen} />
         <Stack.Screen name="BarcodeScannerScreen" component={BarcodeScannerScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="NovoItemScreen" component={NovoItemScreen} />
       </Stack.Navigator>
