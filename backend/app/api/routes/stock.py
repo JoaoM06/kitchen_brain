@@ -4,7 +4,7 @@ from decimal import Decimal
 from datetime import datetime, date
 from typing import List, Optional, Literal, Dict, DefaultDict
 from collections import defaultdict
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -18,6 +18,8 @@ from sqlalchemy.orm import Session
 from app.db.models.items import Item
 from app.schemas.itensEstoque import ItemCreate, ItemUpdate
 from app.schemas.itensEstoque import ItemOut
+
+router = APIRouter(prefix="/stock", tags=["stock"])
 
 def get_item(db: Session, item_id: int):
     return db.query(Item).filter(Item.id == item_id).first()
@@ -53,8 +55,6 @@ def delete_item(db: Session, item_id: int):
         db.commit()
     return db_item
 
-router = APIRouter(prefix="/stock", tags=["stock"])
-
 @router.post("/item", response_model=ItemOut)
 def criar_item(item: ItemCreate, db: Session = Depends(get_db)):
     return create_item(db, item)
@@ -65,6 +65,57 @@ def obter_item(item_id: int, db: Session = Depends(get_db)):
     if not db_item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     return db_item
+
+class StockItemUpdateIn(BaseModel):
+    location: Optional[Location] = None
+    expiry_text: Optional[str] = None
+
+
+@router.patch("/item/{item_id}")
+def update_stock_item(
+    item_id: uuid.UUID,
+    body: StockItemUpdateIn,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    item = (
+        db.query(ItemEstoque)
+        .filter(ItemEstoque.id == item_id, ItemEstoque.usuario_id == user.id)
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+
+    if body.location is not None:
+        local_id = get_or_create_local(db, user.id, body.location)
+        item.local_id = local_id
+
+    if body.expiry_text is not None:
+        item.validade = parse_date_soft(body.expiry_text)
+
+    db.add(item)
+    db.commit()
+
+    return {"ok": True}
+
+
+@router.delete("/item/{item_id}", status_code=204)
+def delete_stock_item(
+    item_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    item = (
+        db.query(ItemEstoque)
+        .filter(ItemEstoque.id == item_id, ItemEstoque.usuario_id == user.id)
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+
+    db.delete(item)
+    db.commit()
+    return Response(status_code=204)
 
 UnitInput = Literal["un", "g", "kg", "ml", "l"]
 Location  = Literal["geladeira", "armário", "armario", "freezer"]
