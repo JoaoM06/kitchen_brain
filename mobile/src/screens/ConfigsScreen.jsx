@@ -131,7 +131,7 @@ export default function ConfigsScreen({ navigation }) {
       </View>
       <FlatList
         data={settings}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.listContent}

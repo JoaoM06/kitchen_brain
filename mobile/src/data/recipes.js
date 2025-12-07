@@ -1,4 +1,5 @@
 const remote = (url) => ({ uri: url });
+import { colors } from "../theme/colors";
 
 export const RECIPES = [
   {
@@ -10,6 +11,8 @@ export const RECIPES = [
     prepTime: "45 min",
     difficulty: "Médio",
     tags: ["almoço", "carne"],
+    status: "Disponível!",
+    statusColor: colors.primary,
     ingredients: [
       "600 g de filé mignon em tiras",
       "2 ovos",
@@ -30,11 +33,20 @@ export const RECIPES = [
     id: "biscoito",
     title: "Biscoito Champagne",
     image: require("../../assets/imgs/biscoito.png"),
+<<<<<<< HEAD
     videoUrl: "https://www.youtube.com/watch?v=PvRZ7cdK_PA",
     servings: 30,
     prepTime: "60 min",
     difficulty: "Avançado",
     tags: ["doces"],
+=======
+    status: "Sem Ingrediente",
+    statusColor: "#E6A500",
+    videoUrl: "https://www.youtube.com/watch?v=TZP7Hhp9Gvk",
+    servings: 30,
+    prepTime: "60 min",
+    difficulty: "Avançado",
+>>>>>>> origin/integracao-arthur-joao
     ingredients: [
       "6 ovos",
       "120 g de açúcar",
@@ -54,11 +66,20 @@ export const RECIPES = [
     id: "sopa",
     title: "Sopa de Espinafre",
     image: require("../../assets/imgs/sopa.png"),
+<<<<<<< HEAD
     videoUrl: "https://www.youtube.com/watch?v=fbkBGo00Jvc",
     servings: 3,
     prepTime: "30 min",
     difficulty: "Fácil",
     tags: ["veg", "jantar"],
+=======
+    status: "Disponível!",
+    statusColor: colors.primary,
+    videoUrl: "https://www.youtube.com/watch?v=6S5cXH9mRZg",
+    servings: 3,
+    prepTime: "30 min",
+    difficulty: "Fácil",
+>>>>>>> origin/integracao-arthur-joao
     ingredients: [
       "2 maços de espinafre",
       "1 batata média",
@@ -75,6 +96,7 @@ export const RECIPES = [
       "Ajuste temperos e sirva com fio de azeite.",
     ],
   },
+<<<<<<< HEAD
   {
     id: "yakissoba",
     title: "Yakissoba Colorido",
@@ -280,3 +302,6 @@ export const RECIPES = [
     ],
   },
 ];
+=======
+];
+>>>>>>> origin/integracao-arthur-joao

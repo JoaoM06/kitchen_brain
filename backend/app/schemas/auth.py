@@ -8,3 +8,10 @@ class LoginInput(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+class ProfileInput(BaseModel):
+    preferencias: list[str]
+    alergias: list[str]
+    restricoes_alimentares: list[str]
+    bio: str
+    nome: str

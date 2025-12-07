@@ -3,32 +3,11 @@ import { Ionicons } from "@expo/vector-icons";
 import SafeScreen from "../components/SafeScreen";
 import { colors } from "../theme/colors";
 import FooterNav from "../components/FooterNav";
-
-const featured = [
-  {
-    id: "1",
-    title: "Parmegiana Carioca",
-    image: require("../../assets/imgs/parm.png"),
-    status: "Disponível!",
-    statusColor: colors.primary,
-  },
-  {
-    id: "2",
-    title: "Biscoito Champagne",
-    image: require("../../assets/imgs/biscoito.png"),
-    status: "Sem Ingrediente",
-    statusColor: "#E6A500",
-  },
-  {
-    id: "3",
-    title: "Sopa de Espinafre",
-    image: require("../../assets/imgs/sopa.png"),
-    status: "Disponível!",
-    statusColor: colors.primary,
-  },
-];
+import { RECIPES } from "../data/recipes";
 
 export default function RecipesScreen({ navigation }) {
+  const handleOpenRecipe = (id) => navigation.navigate("RecipeDetail", { recipeId: id });
+
   return (
     <SafeScreen>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -45,17 +24,17 @@ export default function RecipesScreen({ navigation }) {
 
         <Text style={styles.sectionTitle}>Escolhidas pelo Cubby</Text>
         <FlatList
-          data={featured}
+          data={RECIPES}
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingRight: 24 }}
           renderItem={({ item }) => (
-            <View style={styles.recipeCard}>
+            <Pressable style={styles.recipeCard} onPress={() => handleOpenRecipe(item.id)}>
               <Image source={item.image} style={styles.recipeImage} />
               <Text style={styles.recipeName}>{item.title}</Text>
               <Text style={[styles.recipeStatus, { color: item.statusColor }]}>{item.status}</Text>
-            </View>
+            </Pressable>
           )}
         />
 

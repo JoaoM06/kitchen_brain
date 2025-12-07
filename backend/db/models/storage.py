@@ -21,15 +21,18 @@ class ItemEstoque(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     usuario_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    produto_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("produtos.id"), index=True)
+    produto_generico_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("produtos_genericos.id", ondelete="RESTRICT"), index=True
+    )
     local_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("locais_estoque.id", ondelete="SET NULL"), nullable=True)
 
     quantidade: Mapped[Decimal] = mapped_column(Numeric(12, 3), default=0)
     unidade: Mapped[str] = mapped_column(String(8), default="UN")  # UN, G, KG, ML, L...
     validade: Mapped[Date | None] = mapped_column(Date, nullable=True)
     observacoes: Mapped[str | None] = mapped_column(Text)
-
-    produto: Mapped["Produto"] = relationship(back_populates="itens")
+    produto_generico: Mapped["ProdutoGenerico"] = relationship(
+        "ProdutoGenerico", back_populates="itens_estoque"
+    )
     local: Mapped["LocalEstoque"] = relationship(back_populates="itens")
     movimentos: Mapped[list["MovimentoEstoque"]] = relationship(
         back_populates="item", cascade="all, delete-orphan"
