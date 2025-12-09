@@ -151,7 +151,7 @@ export const RECIPES = [
   {
     id: "pao-queijo",
     title: "Pão de Queijo de Tapioca",
-    image: remote("https://images.unsplash.com/photo-1464306076886-da185f6a9d12?auto=format&fit=crop&w=600&q=80"),
+    image: require("../../assets/imgs/pao-queijo.png"),
     videoUrl: "",
     servings: 20,
     prepTime: "30 min",
@@ -173,7 +173,7 @@ export const RECIPES = [
   {
     id: "bowl-quinoa",
     title: "Bowl de Quinoa e Frango",
-    image: remote("https://images.unsplash.com/photo-1464306076886-da185f6a9d12?auto=format&fit=crop&w=600&q=80"),
+    image: require("../../assets/imgs/bowl-quinoa.png"),
     videoUrl: "",
     servings: 2,
     prepTime: "25 min",

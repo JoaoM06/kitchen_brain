@@ -741,13 +741,7 @@ export default function CardapioBotScreen({ navigation }) {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.7, topP: 0.95, topK: 40, maxOutputTokens: 9000 },
     };
-    const debugMsg = {
-      id: `${baseId}-debug`,
-      role: "bot",
-      text: `DEBUG Gemini payload:\n${JSON.stringify(requestBody, null, 2)}`,
-    };
-
-    setMessages((prev) => [...prev, userMsg, debugMsg, { id: "typing", role: "bot", isTyping: true }]);
+    setMessages((prev) => [...prev, userMsg, { id: "typing", role: "bot", isTyping: true }]);
     setText("");
     setShowEmoji(false);
     scrollToEnd();
