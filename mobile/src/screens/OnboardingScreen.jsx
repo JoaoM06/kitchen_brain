@@ -52,7 +52,9 @@ export default function OnboardingScreen({ navigation }) {
 
     const goNext = () => {
         if (index < SLIDES.length - 1) {
-        listRef.current?.scrollToIndex({ index: index + 1, animated: true });
+        const nextIndex = index + 1;
+        setIndex(nextIndex);
+        listRef.current?.scrollToIndex({ index: nextIndex, animated: true });
         } else {
         navigation.replace("Recipes");
         }
@@ -62,43 +64,61 @@ export default function OnboardingScreen({ navigation }) {
 
     return (
         <SafeScreen>
-            <View style={styles.skipWrap}>
-                <Text style={styles.skip} onPress={skipAll}>
-                Pular
-                </Text>
-            </View>
+            <View style={{ flex: 1 }}>
+                <View style={styles.skipWrap}>
+                    <Text style={styles.skip} onPress={skipAll}>
+                    Pular
+                    </Text>
+                </View>
 
-            <FlatList
-                ref={listRef}
-                data={SLIDES}
-                keyExtractor={(i) => i.id}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={(e) => {
-                const i = Math.round(e.nativeEvent.contentOffset.x / width);
-                setIndex(i);
-                }}
-                renderItem={({ item }) => <Slide item={item} />}
-            />
+                <FlatList
+                    ref={listRef}
+                    data={SLIDES}
+                    keyExtractor={(i) => i.id}
+                    horizontal
+                    pagingEnabled
+                    scrollEnabled={true}
+                    bounces={false}
+                    showsHorizontalScrollIndicator={false}
+                    style={{ flex: 1 }}
+                    snapToInterval={width}
+                    decelerationRate="fast"
+                    getItemLayout={(data, index) => ({
+                        length: width,
+                        offset: width * index,
+                        index,
+                    })}
+                    onMomentumScrollEnd={(e) => {
+                    const i = Math.round(e.nativeEvent.contentOffset.x / width);
+                    setIndex(i);
+                    }}
+                    onScrollToIndexFailed={(info) => {
+                    const wait = new Promise(resolve => setTimeout(resolve, 500));
+                    wait.then(() => {
+                      listRef.current?.scrollToIndex({ index: info.index, animated: true });
+                    });
+                    }}
+                    renderItem={({ item }) => <Slide item={item} />}
+                />
 
-            <View
-                style={[
-                    styles.bottomBar,
-                    index === SLIDES.length - 1 && styles.bottomBarLast,
-                ]}
-                >
-                {index < SLIDES.length - 1 && <Dots total={SLIDES.length} active={index} />}
+                <View
+                    style={[
+                        styles.bottomBar,
+                        index === SLIDES.length - 1 && styles.bottomBarLast,
+                    ]}
+                    >
+                    {index < SLIDES.length - 1 && <Dots total={SLIDES.length} active={index} />}
 
-                {index < SLIDES.length - 1 ? (
-                    <Pressable style={styles.fab} onPress={goNext}>
-                    <Ionicons name="arrow-forward" size={20} color="#fff" />
-                    </Pressable>
-                ) : (
-                    <DefaultButton variant="primary" onPress={goNext} style={{ width: "60%" }}>
-                    Começar
-                    </DefaultButton>
-                )}
+                    {index < SLIDES.length - 1 ? (
+                        <Pressable style={styles.fab} onPress={goNext}>
+                        <Ionicons name="arrow-forward" size={20} color="#fff" />
+                        </Pressable>
+                    ) : (
+                        <DefaultButton variant="primary" onPress={goNext} style={{ width: "60%" }}>
+                        Começar
+                        </DefaultButton>
+                    )}
+                </View>
             </View>
         </SafeScreen>
     );
@@ -106,14 +126,13 @@ export default function OnboardingScreen({ navigation }) {
 
 function Slide({ item }) {
   return (
-    <View style={{ width, paddingHorizontal: 24 }}>
+    <View style={{ width, paddingHorizontal: 24, justifyContent: 'center' }}>
       <View style={styles.illustrationWrap}>
-        <View>
-          <Image
-            source={typeof item.image === "string" ? { uri: item.image } : item.image}
-            style={styles.image}
-          />
-        </View>
+        <Image
+          source={typeof item.image === "string" ? { uri: item.image } : item.image}
+          style={styles.image}
+          resizeMode="contain"
+        />
       </View>
 
       <Text style={styles.title}>{item.title}</Text>
