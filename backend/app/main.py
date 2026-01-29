@@ -10,6 +10,7 @@ from app.api.routes.profile import router as profile_router
 from app.api.routes.transcribe import router as transcribe_router
 from app.api.routes.stock import router as stock_router
 from app.api.routes.lista_compras import router as lista_router
+from app.api.routes.barcode import router as barcode_router
 
 # Criar tabelas automaticamente (apenas em dev)
 from app.db.base import Base
@@ -45,3 +46,4 @@ app.include_router(transcribe_router)
 app.include_router(stock_router)
 app.include_router(settings_router, tags=["settings"])
 app.include_router(lista_router)
+app.include_router(barcode_router)

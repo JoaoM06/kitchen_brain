@@ -16,7 +16,7 @@ class ProdutoGenerico(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     nome: Mapped[str] = mapped_column(String(180))
-    nome_normalizado: Mapped[str] = mapped_column(String(180), index=True)
+    nome_normalizado: Mapped[str] = mapped_column(String(180), unique=True, index=True)
     url_imagem: Mapped[Optional[str]] = mapped_column(String(512))
     categoria: Mapped[Optional[str]] = mapped_column(String(120), index=True)
 
