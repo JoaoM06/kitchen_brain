@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npm start -- --clear)",
-      "Bash(npx expo install expo-image-picker)"
+      "Bash(npx expo install expo-image-picker)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
