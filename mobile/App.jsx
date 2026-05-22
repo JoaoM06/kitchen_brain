@@ -1,7 +1,7 @@
-<<<<<<< HEAD
 import { useEffect } from "react";
 import { LogBox } from "react-native";
 import RootNavigator from "./src/navigation/RootNavigator";
+import { AuthProvider } from "./src/context/AuthContext";
 import { AccessibilityProvider } from "./src/AccessibilityContext";
 
 export default function App() {
@@ -14,20 +14,10 @@ export default function App() {
   }, []);
 
   return (
-    <AccessibilityProvider>
-      <RootNavigator />
-    </AccessibilityProvider>
-  );
-}
-=======
-import RootNavigator from "./src/navigation/RootNavigator";
-import { AuthProvider } from "./src/context/AuthContext";
-
-export default function App() {
-  return (
     <AuthProvider>
-      <RootNavigator />
+      <AccessibilityProvider>
+        <RootNavigator />
+      </AccessibilityProvider>
     </AuthProvider>
   );
 }
->>>>>>> origin/integracao-funciona-por-favor

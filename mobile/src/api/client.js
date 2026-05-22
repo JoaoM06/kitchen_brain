@@ -1,19 +1,7 @@
-<<<<<<< HEAD
-import axios from "axios";
-
-export const BASE_URL = "http://192.168.15.13:8000";
-
-const api = axios.create({
-    baseURL: BASE_URL,
-    headers: { "Content-Type": "application/json" },
-    timeout: 10000,
-})
-
-=======
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 
-export const BASE_URL = "http://192.168.183.179:8000";
+export const BASE_URL = "http://192.168.15.6:8000";
 export const AUTH_KEY = "auth_token";
 
 const api = axios.create({
@@ -55,5 +43,4 @@ api.interceptors.request.use(
   (err) => Promise.reject(err)
 );
 
->>>>>>> origin/integracao-funciona-por-favor
 export default api;

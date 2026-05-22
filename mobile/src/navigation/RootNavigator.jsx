@@ -1,9 +1,11 @@
-<<<<<<< HEAD
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useAuth } from "../context/AuthContext";
+
 import WelcomeScreen from "../screens/WelcomeScreen";
 import LoginScreen from "../screens/LoginScreen";
 import SignupScreen from "../screens/SignupScreen";
+
 import OnboardingScreen from "../screens/OnboardingScreen";
 import RecipesScreen from "../screens/RecipesScreen";
 import RecipeDetailScreen from "../screens/RecipeDetailScreen";
@@ -14,7 +16,8 @@ import PermissionsScreen from "../screens/PermissionsScreen";
 import VoiceRecScreen from "../screens/VoiceRecScreen";
 import AddItemOptionsScreen from "../screens/AddItemOptionsScreen";
 import BarcodeScannerScreen from "../screens/BarcodeScannerScreen";
-import NovoItemScreen from "../screens/ManualAddScreen";
+import ManualAddScreen from "../screens/ManualAddScreen";
+import ConfirmItemsScreen from "../screens/ConfirmItemsScreen";
 import CardapioBotScreen from "../screens/CardapioBotScreen";
 import MenuViewScreen from "../screens/MenuViewScreen";
 import HelpScreen from "../screens/HelpScreen";
@@ -26,67 +29,9 @@ import RecipeHubCreateScreen from "../screens/RecipeHubCreateScreen";
 
 const Stack = createNativeStackNavigator();
 
-export default function RootNavigator() {
-  return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {/* Rotas publicas */}
-        <Stack.Screen name="Welcome" component={WelcomeScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Signup" component={SignupScreen} />
-        
-        {/* Rotas privadas */}
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-        <Stack.Screen name="Recipes" component={RecipesScreen} />
-        <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
-        <Stack.Screen name="Stock" component={StockScreen} />
-        <Stack.Screen name="Config" component={ConfigsScreen} />
-        <Stack.Screen name="Profile" component={ProfileScreen} />
-        <Stack.Screen name="Permissions" component={PermissionsScreen} />
-        <Stack.Screen name="VoiceRec" component={VoiceRecScreen} />
-        <Stack.Screen name="AddItemOptions" component={AddItemOptionsScreen} />
-        <Stack.Screen name="BarcodeScannerScreen" component={BarcodeScannerScreen} options={{ headerShown: false }}/>
-        <Stack.Screen name="NovoItemScreen" component={NovoItemScreen} />
-        <Stack.Screen name="CardapioBotScreen" component={CardapioBotScreen} />
-        <Stack.Screen name="MenuView" component={MenuViewScreen} />
-        <Stack.Screen name="Help" component={HelpScreen} />
-        <Stack.Screen name="About" component={AboutScreen} />
-        <Stack.Screen name="Accessibility" component={AccessibilityScreen} />
-        <Stack.Screen name="MarketMap" component={MarketMapScreen} />
-        <Stack.Screen name="RecipeHub" component={RecipeHubScreen} />
-        <Stack.Screen name="RecipeHubCreate" component={RecipeHubCreateScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-}
-=======
-import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-
-import WelcomeScreen from "../screens/WelcomeScreen";
-import LoginScreen from "../screens/LoginScreen";
-import SignupScreen from "../screens/SignupScreen";
-
-// privado
-import OnboardingScreen from "../screens/OnboardingScreen";
-import RecipesScreen from "../screens/RecipesScreen";
-import StockScreen from "../screens/StockScreen";
-import ConfigsScreen from "../screens/ConfigsScreen";
-import ProfileScreen from "../screens/ProfileScreen";
-import PermissionsScreen from "../screens/PermissionsScreen";
-import VoiceRecScreen from "../screens/VoiceRecScreen";
-import AddItemOptionsScreen from "../screens/AddItemOptionsScreen";
-import BarcodeScannerScreen from "../screens/BarcodeScannerScreen";
-import ManualAddScreen from "../screens/ManualAddScreen";
-import ConfirmItemsScreen from "../screens/ConfirmItemsScreen";
-import RecipeDetailScreen from "../screens/RecipeDetailScreen";
-
-const Stack = createNativeStackNavigator();
-import { useAuth } from "../context/AuthContext";
-
 function PublicStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown:false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Signup" component={SignupScreen} />
@@ -96,19 +41,28 @@ function PublicStack() {
 
 function PrivateStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown:false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Recipes" component={RecipesScreen} />
+      <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
       <Stack.Screen name="Stock" component={StockScreen} />
       <Stack.Screen name="Config" component={ConfigsScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Permissions" component={PermissionsScreen} />
       <Stack.Screen name="VoiceRec" component={VoiceRecScreen} />
       <Stack.Screen name="AddItemOptions" component={AddItemOptionsScreen} />
-      <Stack.Screen name="BarcodeScannerScreen" component={BarcodeScannerScreen}/>
+      <Stack.Screen name="BarcodeScannerScreen" component={BarcodeScannerScreen} />
+      <Stack.Screen name="NovoItemScreen" component={ManualAddScreen} />
       <Stack.Screen name="ManualAdd" component={ManualAddScreen} />
       <Stack.Screen name="ConfirmItems" component={ConfirmItemsScreen} />
-      <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
+      <Stack.Screen name="CardapioBotScreen" component={CardapioBotScreen} />
+      <Stack.Screen name="MenuView" component={MenuViewScreen} />
+      <Stack.Screen name="Help" component={HelpScreen} />
+      <Stack.Screen name="About" component={AboutScreen} />
+      <Stack.Screen name="Accessibility" component={AccessibilityScreen} />
+      <Stack.Screen name="MarketMap" component={MarketMapScreen} />
+      <Stack.Screen name="RecipeHub" component={RecipeHubScreen} />
+      <Stack.Screen name="RecipeHubCreate" component={RecipeHubCreateScreen} />
     </Stack.Navigator>
   );
 }
@@ -121,4 +75,3 @@ export default function RootNavigator() {
     </NavigationContainer>
   );
 }
->>>>>>> origin/integracao-funciona-por-favor

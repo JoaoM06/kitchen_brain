@@ -36,15 +36,6 @@ export default function WelcomeScreen({ navigation }) {
           Fazer login
         </DefaultButton>
 
-        <Text style={styles.visitorText}>
-          Entrar como visitante?{" "}
-          <Text
-            style={styles.visitorLink}
-            onPress={() => navigation.navigate("Onboarding")}
-          >
-            Entrar
-          </Text>
-        </Text>
       </View>
     </SafeScreen>
   );
@@ -57,6 +48,4 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: "700", color: colors.text, marginBottom: 6 },
   subtitle: { fontSize: 14, color: colors.mutedText, textAlign: "center", lineHeight: 20 },
   btn: { width: "100%", marginBottom: 10 },
-  visitorText: { color: colors.mutedText, marginTop: 12 },
-  visitorLink: { color: colors.primary, fontWeight: "600" },
 });

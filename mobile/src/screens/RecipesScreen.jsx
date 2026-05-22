@@ -1,11 +1,9 @@
-<<<<<<< HEAD
 import { View, Text, StyleSheet, Image, FlatList, Pressable, ScrollView, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import SafeScreen from "../components/SafeScreen";
 import { colors } from "../theme/colors";
 import FooterNav from "../components/FooterNav";
 import { RECIPES } from "../data/recipes";
-import { getLocalStockItems } from "../data/stock";
 
 const getImageSource = (img) => (typeof img === "string" ? { uri: img } : img);
 
@@ -20,15 +18,6 @@ export default function RecipesScreen({ navigation }) {
     { id: "veggie", title: "Veggie", icon: "leaf-outline", color: "#DCFCE7" },
     { id: "dessert", title: "Doces", icon: "ice-cream-outline", color: "#FCE7F3" },
   ];
-
-  const stockNames = getLocalStockItems().map((item) => item.name.toLowerCase());
-  const getRecipeStatus = (recipe) => {
-    const ingredientsText = (recipe.ingredients || []).join(" ").toLowerCase();
-    const hasStock = stockNames.some((name) => ingredientsText.includes(name));
-    return hasStock
-      ? { text: "No estoque", color: colors.primary }
-      : { text: "Comprar ingredientes", color: "#DC2626" };
-  };
 
   const handleOpenRecipe = (id) => navigation.navigate("RecipeDetail", { recipeId: id });
   const handleWatchVideo = (url) => url && Linking.openURL(url).catch(() => {});
@@ -65,9 +54,7 @@ export default function RecipesScreen({ navigation }) {
             <Pressable style={styles.recipeCard} onPress={() => handleOpenRecipe(item.id)}>
               <Image source={getImageSource(item.image)} style={styles.recipeImage} />
               <Text style={styles.recipeName}>{item.title}</Text>
-              <Text style={[styles.recipeStatus, { color: getRecipeStatus(item).color }]}>
-                {getRecipeStatus(item).text}
-              </Text>
+              <Text style={[styles.recipeStatus, { color: item.statusColor }]}>{item.status}</Text>
             </Pressable>
           )}
         />
@@ -131,7 +118,7 @@ export default function RecipesScreen({ navigation }) {
       </ScrollView>
 
       <FooterNav active="Recipes" onNavigate={navigation.replace} />
-    </SafeScreen> 
+    </SafeScreen>
   );
 }
 
@@ -144,249 +131,35 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
     marginBottom: 12,
   },
-  title: {
-    color: "#fff",
-    fontSize: 30,
-    fontWeight: "800",
-    textAlign: "center",
-    marginTop: 10,
-    marginBottom: 12,
-  },
-  mainCard: {
-    marginHorizontal: 24,
-    borderRadius: 18,
-    overflow: "hidden",
-    position: "relative",
-  },
-  mainImage: {
-    width: "100%",
-    height: 200,
-    resizeMode: "cover",
-  },
-  heroPlaceholder: {
-    position: "absolute",
-    inset: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "rgba(0,0,0,0.2)",
-  },
+  title: { color: "#fff", fontSize: 30, fontWeight: "800", textAlign: "center", marginTop: 10, marginBottom: 12 },
+  mainCard: { marginHorizontal: 24, borderRadius: 18, overflow: "hidden", position: "relative" },
+  mainImage: { width: "100%", height: 200, resizeMode: "cover" },
+  heroPlaceholder: { position: "absolute", inset: 0, justifyContent: "center", alignItems: "center", gap: 12, backgroundColor: "rgba(0,0,0,0.2)" },
   heroPlaceholderText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   hubBanner: {
-    marginHorizontal: 24,
-    marginTop: 16,
-    marginBottom: 12,
-    backgroundColor: "#111827",
-    borderRadius: 18,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    marginHorizontal: 24, marginTop: 16, marginBottom: 12,
+    backgroundColor: "#111827", borderRadius: 18, padding: 16,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
   },
-  hubTitle: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  hubSubtitle: {
-    color: "#D1D5DB",
-    fontSize: 13,
-    marginTop: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.text,
-    marginTop: 16,
-    marginBottom: 12,
-    marginLeft: 24,
-  },
-  recipeCard: {
-    width: 130,
-    marginLeft: 24,
-  },
-  recipeImage: {
-    width: "100%",
-    height: 90,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
+  hubTitle: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  hubSubtitle: { color: "#D1D5DB", fontSize: 13, marginTop: 4 },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: colors.text, marginTop: 16, marginBottom: 12, marginLeft: 24 },
+  recipeCard: { width: 130, marginLeft: 24 },
+  recipeImage: { width: "100%", height: 90, borderRadius: 8, marginBottom: 8 },
   recipeName: { fontWeight: "600", color: colors.text },
   recipeStatus: { fontSize: 12, fontWeight: "500" },
-  recipeCardSmall: {
-    width: 160,
-    marginLeft: 24,
-  },
-  recipeImageSmall: {
-    width: "100%",
-    height: 110,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
+  recipeCardSmall: { width: 160, marginLeft: 24 },
+  recipeImageSmall: { width: "100%", height: 110, borderRadius: 12, marginBottom: 8 },
   recipeNameSmall: { fontWeight: "600", color: colors.text },
   recipeMetaSmall: { fontSize: 12, color: "#6b7280" },
-  spotlightWrapper: {
-    flexDirection: "row",
-    gap: 12,
-    marginHorizontal: 24,
-  },
-  spotlightCard: {
-    flex: 1,
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#f1f5f9",
-    padding: 12,
-    gap: 6,
-  },
+  spotlightWrapper: { flexDirection: "row", gap: 12, marginHorizontal: 24 },
+  spotlightCard: { flex: 1, borderRadius: 16, backgroundColor: "#fff", borderWidth: 1, borderColor: "#f1f5f9", padding: 12, gap: 6 },
   spotlightImage: { width: "100%", height: 90, borderRadius: 12 },
   spotlightTitle: { fontWeight: "700", color: colors.text },
   spotlightMeta: { fontSize: 12, color: "#6b7280" },
-  videoBadge: {
-    marginTop: 4,
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "#0d9488",
-  },
+  videoBadge: { marginTop: 4, alignSelf: "flex-start", flexDirection: "row", gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: "#0d9488" },
   videoBadgeText: { color: "#fff", fontWeight: "600", fontSize: 12 },
-  categoriesRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginHorizontal: 24,
-    marginBottom: 80,
-  },
-  categoryCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 16,
-  },
+  categoriesRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginHorizontal: 24, marginBottom: 80 },
+  categoryCard: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 16 },
   categoryText: { fontWeight: "600", color: colors.text },
 });
-=======
-import { View, Text, StyleSheet, Image, FlatList, Pressable, ScrollView } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import SafeScreen from "../components/SafeScreen";
-import { colors } from "../theme/colors";
-import FooterNav from "../components/FooterNav";
-import { RECIPES } from "../data/recipes";
-
-export default function RecipesScreen({ navigation }) {
-  const handleOpenRecipe = (id) => navigation.navigate("RecipeDetail", { recipeId: id });
-
-  return (
-    <SafeScreen>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.headerContainer}>
-            <Text style={styles.title}>Receitas</Text>
-
-            <View style={styles.mainCard}>
-            <Image source={require("../../assets/imgs/chef.png")} style={styles.mainImage} />
-            <Pressable style={styles.playButton}>
-                {/* <Ionicons name="play-circle" size={64} color="rgba(0,0,0,0.4)" /> */}
-            </Pressable>
-            </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>Escolhidas pelo Cubby</Text>
-        <FlatList
-          data={RECIPES}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingRight: 24 }}
-          renderItem={({ item }) => (
-            <Pressable style={styles.recipeCard} onPress={() => handleOpenRecipe(item.id)}>
-              <Image source={item.image} style={styles.recipeImage} />
-              <Text style={styles.recipeName}>{item.title}</Text>
-              <Text style={[styles.recipeStatus, { color: item.statusColor }]}>{item.status}</Text>
-            </Pressable>
-          )}
-        />
-
-        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Populares</Text>
-        <View style={styles.popularPlaceholder}>
-          <View style={styles.popularBox} />
-          <View style={styles.popularBox} />
-          <View style={styles.popularBox} />
-        </View>
-      </ScrollView>
-
-      <FooterNav active="Recipes" onNavigate={navigation.replace} />
-    </SafeScreen> 
-  );
-}
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  headerContainer: {
-    backgroundColor: colors.primary,
-    height: 280,
-  },
-  title: {
-    color: "#fff",
-    fontSize: 28,
-    fontWeight: "800",
-    textAlign: "center",
-    marginTop: 10,
-    marginBottom: 16,
-  },
-  mainCard: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
-    marginHorizontal: 24,
-    overflow: "hidden",
-  },
-  mainImage: {
-    width: "100%",
-    height: 180,
-    borderRadius: 16,
-    resizeMode: "cover",
-  },
-  playButton: {
-    position: "absolute",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.text,
-    marginTop: 16,
-    marginBottom: 12,
-    marginLeft: 24,
-  },
-  recipeCard: {
-    width: 130,
-    marginLeft: 24,
-  },
-  recipeImage: {
-    width: "100%",
-    height: 90,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  recipeName: { fontWeight: "600", color: colors.text },
-  recipeStatus: { fontSize: 12, fontWeight: "500" },
-  popularPlaceholder: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 8,
-    marginBottom: 80,
-  },
-  popularBox: {
-    width: 90,
-    height: 90,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-  },
-});
->>>>>>> origin/integracao-funciona-por-favor
