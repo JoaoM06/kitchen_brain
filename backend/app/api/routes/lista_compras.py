@@ -5,7 +5,7 @@ from app.db.models.lista_compras import ListaComprasBase
 from app.db.models.items import Item
 from app.schemas.lista_compras import ListaComprasCriar, ListaComprasOut
 from app.schemas.itensEstoque import ItemCreate
-from app.api.routes.stock import create_item, delete_item
+from app.api.routes.stock import create_item
 
 router = APIRouter(prefix="/lista-compras", tags=["Lista de Compras"])
 
