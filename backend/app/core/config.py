@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL_NAME: str = "gemini-2.5-flash"
 
+    # Observabilidade (Sentry)
+    SENTRY_DSN: Optional[str] = None
+    ENVIRONMENT: str = "dev"  # dev | staging | prod
+    SENTRY_RELEASE: Optional[str] = None
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
+
     class Config:
         env_file = ".env"
 
