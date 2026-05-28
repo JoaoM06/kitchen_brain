@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View, TouchableOpacity, Text, Animated, Easing,
   StyleSheet, TextInput, ActivityIndicator, Alert,
@@ -15,6 +15,24 @@ export default function VoiceRecScreen({ navigation }) {
 
   const amplitude = useRef(new Animated.Value(1)).current;
   const timerRef = useRef(null);
+  // Espelha o `recording` atual para o cleanup de unmount sem re-disparar o
+  // efeito a cada mudança de estado (evita stopAndUnload em gravação já parada).
+  const recordingRef = useRef(null);
+
+  // Ao desmontar a tela: limpa o timer e aborta a gravação em andamento, para
+  // não vazar o setInterval nem chamar getStatusAsync em ref obsoleta.
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current = null;
+      }
+    };
+  }, []);
 
   const animateWave = (value) => {
     Animated.timing(amplitude, {
@@ -38,6 +56,7 @@ export default function VoiceRecScreen({ navigation }) {
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       setRecording(recording);
+      recordingRef.current = recording;
       setIsRecording(true);
 
       timerRef.current = setInterval(async () => {
@@ -65,6 +84,7 @@ export default function VoiceRecScreen({ navigation }) {
       const uri = recording.getURI();
       setIsRecording(false);
       setRecording(null);
+      recordingRef.current = null;
       if (!uri) return;
 
       setLoading(true);
