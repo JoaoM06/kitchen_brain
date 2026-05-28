@@ -1,9 +1,0 @@
-# Dependencies
-node_modules/
-
-# Expo cache
-.expo/
-
-# Build output
-dist/
-web-build/

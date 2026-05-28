@@ -12,3 +12,13 @@ backend/venv
 backend/.env
 .env
 
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+
+# Databases
+*.db
+*.sqlite3
+
