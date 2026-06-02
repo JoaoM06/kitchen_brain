@@ -1,18 +1,22 @@
-from pydantic import BaseModel
+from __future__ import annotations
+import uuid
 from datetime import date
+from pydantic import BaseModel
 
-class BaseListaCompras(BaseModel):
+
+class ListaComprasCriar(BaseModel):
     nome: str
-    secoes: list[str]
-    categorias: list[str]
+    produto_generico_id: uuid.UUID | None = None
     validade: date | None = None
-    comprado: bool = False
 
-class ListaComprasCriar(BaseListaCompras):
-    pass
 
-class ListaComprasOut(BaseListaCompras):
+class ListaComprasOut(BaseModel):
     id: int
+    nome: str
+    comprado: bool
+    usuario_id: uuid.UUID | None = None
+    produto_generico_id: uuid.UUID | None = None
+    validade: date | None = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True

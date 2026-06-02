@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -14,10 +15,11 @@ from app.api.routes.barcode import router as barcode_router
 from app.api.routes.recipes import router as recipes_router
 from app.api.routes.cardapiobot import router as cardapiobot_router
 
-# Criar tabelas automaticamente (apenas em dev)
-from app.db.base import Base
-from app.db.session import engine
-Base.metadata.create_all(bind=engine)
+# create_all apenas para SQLite de testes (INIT_DB=1)
+if os.getenv("INIT_DB", "").lower() in ("1", "true", "yes"):
+    from app.db.base import Base
+    from app.db.session import engine
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="KitchenBrain API", version="0.1.0")
 

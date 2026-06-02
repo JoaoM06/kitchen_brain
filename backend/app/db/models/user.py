@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, List
 import uuid
 
-from sqlalchemy import String, Boolean, DateTime, func, JSON
+from sqlalchemy import String, Text, Boolean, DateTime, func, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -32,4 +32,4 @@ class User(Base):
     alergias: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True, default=None)
     restricoes_alimentares: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True, default=None)
     bio: Mapped[Optional[str]] = mapped_column(String(500), nullable=True, default=None)
-    foto_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True, default=None)
+    foto_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True, default=None)
