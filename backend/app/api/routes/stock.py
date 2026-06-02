@@ -14,57 +14,6 @@ from app.db.models.product import ProdutoGenerico
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.db.models.user import User
-from sqlalchemy.orm import Session
-from app.db.models.items import Item
-from app.schemas.itensEstoque import ItemCreate, ItemUpdate
-from app.schemas.itensEstoque import ItemOut
-
-def get_item(db: Session, item_id: int):
-    return db.query(Item).filter(Item.id == item_id).first()
-
-def create_item(db: Session, item: ItemCreate):
-    db_item = Item(
-        nome=item.nome,
-        secoes=",".join(item.secoes),
-        categorias=",".join(item.categorias),
-        validade=item.validade,
-    )
-    db.add(db_item)
-    db.commit()
-    db.refresh(db_item)
-    return db_item
-
-def update_item(db: Session, item_id: int, item: ItemUpdate):
-    db_item = get_item(db, item_id)
-    if not db_item:
-        return None
-    db_item.nome = item.nome
-    db_item.secoes = ",".join(item.secoes)
-    db_item.categorias = ",".join(item.categorias)
-    db_item.validade = item.validade
-    db.commit()
-    db.refresh(db_item)
-    return db_item
-
-def delete_item(db: Session, item_id: int):
-    db_item = get_item(db, item_id)
-    if db_item:
-        db.delete(db_item)
-        db.commit()
-    return db_item
-
-router = APIRouter(prefix="/stock", tags=["stock"])
-
-@router.post("/item", response_model=ItemOut)
-def criar_item(item: ItemCreate, db: Session = Depends(get_db)):
-    return create_item(db, item)
-
-@router.get("/itens/{item_id}", response_model=ItemOut)
-def obter_item(item_id: int, db: Session = Depends(get_db)):
-    db_item = get_item(db, item_id)
-    if not db_item:
-        raise HTTPException(status_code=404, detail="Item não encontrado")
-    return db_item
 
 UnitInput = Literal["un", "g", "kg", "ml", "l"]
 Location  = Literal["geladeira", "armário", "armario", "freezer"]
@@ -135,7 +84,6 @@ def get_or_create_local(db: Session, user_id: uuid.UUID, name_in: Optional[str])
     )
     if loc:
         return loc.id
-    # cria automaticamente
     loc = LocalEstoque(usuario_id=user_id, nome=nice, descricao=None)
     db.add(loc)
     db.flush()
@@ -166,6 +114,8 @@ def get_or_create_generic(db: Session, name: str, normalized: Optional[str]) -> 
     db.add(g)
     db.flush()
     return g
+
+router = APIRouter(prefix="/stock", tags=["stock"])
 
 @router.post("/confirm-voice", response_model=ConfirmResult)
 def confirm_voice_items(
@@ -228,7 +178,6 @@ def confirm_voice_items(
     return ConfirmResult(inserted=inserted, created_generic=created_generic, item_ids=item_ids)
 
 
-
 class ListItemOut(BaseModel):
     id: uuid.UUID
     name: str
@@ -258,7 +207,6 @@ def _status_from_expiry(d: Optional[date]) -> Literal["ok", "warn", "danger"]:
     return "ok"
 
 def _norm_loc_for_group(loc_name: Optional[str]) -> str:
-    """Padroniza nomes para os grupos exibidos."""
     if not loc_name:
         return "Sem local"
     s = (loc_name or "").strip().lower()
@@ -311,6 +259,7 @@ def list_stock(
             status=_status_from_expiry(r.validade),
         )
         buckets[loc].append(item)
+
     def _status_rank(st: str) -> int:
         return {"danger": 0, "warn": 1, "ok": 2}.get(st, 3)
 

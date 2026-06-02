@@ -1,0 +1,11 @@
+KitchenBrain – Alembic migrations
+
+Comandos frequentes:
+  alembic upgrade head          # aplica todas as migrations pendentes
+  alembic downgrade -1          # reverte a última migration
+  alembic current               # versão atual do banco
+  alembic history               # histórico de migrations
+
+Banco existente (RDS / staging):
+  alembic stamp 001_a1b2c3d4e5f6  # marca como já na baseline sem executá-la
+  alembic upgrade head             # executa apenas as migrations novas
