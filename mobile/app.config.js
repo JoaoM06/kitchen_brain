@@ -2,15 +2,12 @@
 // (prefixo EXPO_PUBLIC_ é o único exposto ao bundle) em vez de hardcodá-los.
 // O app.json continua sendo a base estática; aqui só sobrescrevemos `extra`.
 //
-// A chave do Gemini NÃO é mais usada pelo app: as chamadas de IA passam pelo
-// backend (/cardapiobot/*), que mantém a chave em segredo. O campo abaixo fica
-// disponível apenas para cenários futuros e nunca deve receber um valor real
-// commitado.
+// A chave do Gemini NÃO é usada pelo app: as chamadas de IA passam pelo backend
+// (/cardapiobot/*), que mantém a chave em segredo. Por isso ela não aparece aqui.
 export default ({ config }) => ({
   ...config,
   extra: {
     ...(config.extra || {}),
     API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || null,
-    GEMINI_API_KEY: process.env.EXPO_PUBLIC_GEMINI_API_KEY || null,
   },
 });

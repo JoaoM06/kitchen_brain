@@ -20,14 +20,13 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 import * as Sharing from "expo-sharing";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import SafeScreen from "../components/SafeScreen";
 import FooterNav from "../components/FooterNav";
 import { colors } from "../theme/colors";
 import { addSavedMenu, getSavedMenus } from "../storage/savedMenus";
-import { BASE_URL } from "../api/client";
 import { chatCardapiobot } from "../api/cardapiobot";
+import { fetchPantry } from "../api/stock";
 import { getLocalStockItems, getLocalExpiringItems } from "../data/stock";
 import { generateMenuPdf } from "../utils/menuPdf";
 
@@ -526,16 +525,8 @@ export default function CardapioBotScreen({ navigation }) {
     let isMounted = true;
     (async () => {
       try {
-        const token = await AsyncStorage.getItem("auth_token");
-        if (!token) {
-          applyLocalStockFallback();
-          return;
-        }
-        const res = await fetch(`${BASE_URL}/me/pantry`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`Pantry HTTP ${res.status}`);
-        const data = await res.json();
+        // O token é injetado pelo interceptor do client.js (ver api/stock.js).
+        const data = await fetchPantry();
         if (!isMounted) return;
         const normalized = normalizePantryFromApi(data?.items);
         if (!normalized.length) {
@@ -644,17 +635,13 @@ export default function CardapioBotScreen({ navigation }) {
   const callGemini = async (prompt, retries = 3) => {
     setLoading(true);
 
-    const token = await AsyncStorage.getItem("auth_token");
-    if (!token) {
-      setLoading(false);
-      throw new Error("Sessão expirada. Faça login novamente para gerar cardápios.");
-    }
-
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         // A chave do Gemini vive apenas no backend; o app só envia o prompt
-        // como mensagem de usuário para /cardapiobot/chat.
-        const data = await chatCardapiobot([{ role: "user", content: prompt }], null, token);
+        // como mensagem de usuário para /cardapiobot/chat. O token de
+        // autenticação é injetado automaticamente pelo client.js. Uma sessão
+        // inválida volta como 401 e é tratada no catch abaixo.
+        const data = await chatCardapiobot([{ role: "user", content: prompt }], null);
         setLoading(false);
 
         const txt = String(data?.response || "").trim();

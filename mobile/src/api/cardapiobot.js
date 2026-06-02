@@ -1,5 +1,9 @@
 import api from "./client";
 
+// O token de autenticação é injetado automaticamente pelo interceptor do
+// client.js (ver mobile/src/api/client.js); por isso nenhuma função abaixo
+// recebe ou seta o header Authorization manualmente.
+
 /**
  * Gera um cardápio personalizado usando IA.
  * @param {object} params - Parâmetros para geração
@@ -11,12 +15,10 @@ import api from "./client";
  * @param {string[]} [params.culinarias] - Culinárias preferidas
  * @param {string[]} [params.equipamentos] - Equipamentos disponíveis
  * @param {string} [params.mensagem_adicional] - Observações extras
- * @param {string} token - Token de autenticação
  * @returns {Promise<object>} Cardápio gerado
  */
-export async function generateCardapio(params, token) {
+export async function generateCardapio(params) {
     const response = await api.post("/cardapiobot/generate", params, {
-        headers: { Authorization: `Bearer ${token}` },
         timeout: 60000, // 60s para IA processar
     });
     return response.data;
@@ -26,16 +28,13 @@ export async function generateCardapio(params, token) {
  * Envia mensagem para o chat do CardapioBot.
  * @param {Array<{role: string, content: string}>} messages - Histórico de mensagens
  * @param {object} [context] - Contexto adicional
- * @param {string} token - Token de autenticação
  * @returns {Promise<{response: string, role: string}>}
  */
-export async function chatCardapiobot(messages, context, token) {
-    const response = await api.post("/cardapiobot/chat",
+export async function chatCardapiobot(messages, context) {
+    const response = await api.post(
+        "/cardapiobot/chat",
         { messages, context },
-        {
-            headers: { Authorization: `Bearer ${token}` },
-            timeout: 30000,
-        }
+        { timeout: 30000 }
     );
     return response.data;
 }
@@ -43,26 +42,21 @@ export async function chatCardapiobot(messages, context, token) {
 /**
  * Salva um cardápio gerado no histórico do usuário.
  * @param {object} cardapio - Cardápio para salvar
- * @param {string} token - Token de autenticação
  * @returns {Promise<{success: boolean, cardapio_id: string, message: string}>}
  */
-export async function saveCardapio(cardapio, token) {
-    const response = await api.post("/cardapiobot/save", cardapio, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+export async function saveCardapio(cardapio) {
+    const response = await api.post("/cardapiobot/save", cardapio);
     return response.data;
 }
 
 /**
  * Obtém histórico de cardápios do usuário.
  * @param {number} [limit=10] - Limite de resultados
- * @param {string} token - Token de autenticação
  * @returns {Promise<Array>}
  */
-export async function getCardapioHistory(limit, token) {
+export async function getCardapioHistory(limit) {
     const response = await api.get("/cardapiobot/history", {
         params: { limit },
-        headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
 }
@@ -70,12 +64,9 @@ export async function getCardapioHistory(limit, token) {
 /**
  * Obtém detalhes de um cardápio salvo.
  * @param {string} cardapioId - ID do cardápio
- * @param {string} token - Token de autenticação
  * @returns {Promise<object>}
  */
-export async function getCardapioDetail(cardapioId, token) {
-    const response = await api.get(`/cardapiobot/history/${cardapioId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+export async function getCardapioDetail(cardapioId) {
+    const response = await api.get(`/cardapiobot/history/${cardapioId}`);
     return response.data;
 }

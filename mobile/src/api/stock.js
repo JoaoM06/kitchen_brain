@@ -5,6 +5,11 @@ export async function confirmVoiceItems(selections) {
   return data;
 }
 
+export async function fetchPantry() {
+  const { data } = await api.get("/me/pantry");
+  return data;
+}
+
 export async function fetchStock({ q } = {}) {
   const params = {};
   if (q) params.q = q;
