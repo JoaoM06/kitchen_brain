@@ -1,6 +1,8 @@
 """
 Rotas de código de barras - lookup, registro e vinculação de produtos.
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -8,6 +10,8 @@ from sqlalchemy import func
 from typing import Optional, List
 from unidecode import unidecode
 import re
+
+logger = logging.getLogger(__name__)
 
 from app.db.session import get_db
 from app.db.models.product import ProdutoGenerico, Produto, CodigoBarras
@@ -103,8 +107,7 @@ def find_best_generico(db: Session, nome: str, marca: str = None) -> Optional[tu
             return (result[0], float(result[1]))
 
     except Exception:
-        # Fallback sem trigram
-        pass
+        logger.debug("trigram_search_unavailable", exc_info=True)
 
     # Fallback: busca simples por substring
     produtos = db.query(ProdutoGenerico).limit(1000).all()
@@ -326,7 +329,7 @@ def search_generico(q: str, limit: int = 10, db: Session = Depends(get_db)) -> L
         ]
 
     except Exception:
-        # Fallback
+        logger.debug("trigram_search_unavailable", exc_info=True)
         produtos = (
             db.query(ProdutoGenerico)
             .filter(ProdutoGenerico.nome_normalizado.contains(norm.split()[0] if norm else ""))

@@ -2,6 +2,8 @@
 Rotas do CardapioBot - geração de cardápios personalizados com IA.
 Move a lógica de IA do frontend para o backend, protegendo a API key.
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -9,6 +11,8 @@ from typing import Optional, List, Dict, Any
 from datetime import date, timedelta
 import json
 import uuid
+
+logger = logging.getLogger(__name__)
 
 from app.db.session import get_db
 from app.api.deps import get_current_user
@@ -237,10 +241,12 @@ def generate_cardapio(
 
         return CardapioResponse(**cardapio_data)
 
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao processar resposta da IA: {e}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro na geração do cardápio: {e}")
+    except json.JSONDecodeError:
+        logger.exception("cardapio_json_parse_failed")
+        raise HTTPException(status_code=500, detail="Erro ao processar resposta da IA.")
+    except Exception:
+        logger.exception("cardapio_generation_failed")
+        raise HTTPException(status_code=500, detail="Erro na geração do cardápio.")
 
 
 @router.post("/chat")
@@ -296,8 +302,9 @@ Seja conciso e útil. Use emojis ocasionalmente para tornar a conversa agradáve
             "role": "assistant"
         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro no chat: {e}")
+    except Exception:
+        logger.exception("cardapiobot_chat_failed")
+        raise HTTPException(status_code=500, detail="Erro no chat.")
 
 
 @router.post("/save")
@@ -342,9 +349,10 @@ def save_cardapio(
             "message": "Cardápio salvo com sucesso!"
         }
 
-    except Exception as e:
+    except Exception:
+        logger.exception("cardapio_save_failed")
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Erro ao salvar cardápio: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao salvar cardápio.")
 
 
 @router.get("/history", response_model=List[CardapioHistoryItem])

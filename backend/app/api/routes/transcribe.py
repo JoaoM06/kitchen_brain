@@ -1,4 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query, Depends
+import logging
+
+from fastapi import APIRouter, Request, UploadFile, File, HTTPException, Query, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -7,6 +9,10 @@ from faster_whisper import WhisperModel
 import tempfile, shutil, os
 from unidecode import unidecode
 import re
+
+from app.core.limiter import limiter
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 from app.db.session import get_db
@@ -24,7 +30,9 @@ class TranscribeOut(BaseModel):
 
 
 @router.post("/transcribe", response_model=TranscribeOut)
+@limiter.limit("10/minute")
 async def transcribe_audio(
+        request: Request,
         audio: UploadFile = File(..., description="Arquivo de áudio (m4a/mp3/wav/ogg...)"),
         language: str = Query("pt", description="Idioma (ex.: 'pt', 'en', 'auto' ...)")
     ):
@@ -47,14 +55,15 @@ async def transcribe_audio(
         text = " ".join([s.text for s in segments]).strip()
         return TranscribeOut(text=text or "")
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Falha na transcrição: {e}")
+    except Exception:
+        logger.exception("transcription_failed")
+        raise HTTPException(status_code=500, detail="Erro interno na transcrição.")
     finally:
         try:
             if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)
         except Exception:
-            pass
+            logger.debug("temp_file_cleanup_failed", exc_info=True)
 
 
 # Rota parse text com Gemini (condicional)
@@ -143,8 +152,9 @@ def format_text(body: TextIn):
             },
         )
         return response.parsed
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Falha ao formatar texto: {e}")
+    except Exception:
+        logger.exception("parse_text_failed")
+        raise HTTPException(status_code=500, detail="Erro interno ao formatar texto.")
 
 
 # Match de produtos genéricos

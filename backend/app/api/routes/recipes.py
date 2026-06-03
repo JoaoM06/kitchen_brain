@@ -122,6 +122,7 @@ def list_recipes(
 @router.get("/suggested", response_model=List[ReceitaSugerida])
 def get_suggested_recipes(
     limit: int = Query(10, le=50),
+    offset: int = Query(0, ge=0),
     priorizar_vencendo: bool = Query(True),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -150,11 +151,11 @@ def get_suggested_recipes(
         if item.validade and item.validade <= limite_validade
     }
 
-    # Busca receitas com ingredientes
+    # Busca candidatos para scoring — 200 é suficiente para ranking relevante
     receitas = (
         db.query(Receita)
         .options(joinedload(Receita.ingredientes))
-        .limit(500)  # Limita para performance
+        .limit(200)
         .all()
     )
 
@@ -196,9 +197,9 @@ def get_suggested_recipes(
             "score": score,
         })
 
-    # Ordena por score (match + bonus vencendo)
+    # Ordena por score (match + bonus vencendo) e aplica paginação pós-ranking
     resultados.sort(key=lambda x: x["score"], reverse=True)
-    resultados = resultados[:limit]
+    page = resultados[offset : offset + limit]
 
     return [
         ReceitaSugerida(
@@ -215,7 +216,7 @@ def get_suggested_recipes(
             ingredientes_total=r["total"],
             ingredientes_faltando=r["faltando"],
         )
-        for r in resultados
+        for r in page
     ]
 
 

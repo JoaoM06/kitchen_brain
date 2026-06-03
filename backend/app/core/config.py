@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: str = "*"
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL_NAME: str = "gemini-2.5-flash"
+    LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "json"
 
     class Config:
         env_file = ".env"
