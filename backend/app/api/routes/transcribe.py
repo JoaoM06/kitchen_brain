@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query, Depends
+from fastapi import APIRouter, Request, UploadFile, File, HTTPException, Query, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -9,6 +9,8 @@ from faster_whisper import WhisperModel
 import tempfile, shutil, os
 from unidecode import unidecode
 import re
+
+from app.core.limiter import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,9 @@ class TranscribeOut(BaseModel):
 
 
 @router.post("/transcribe", response_model=TranscribeOut)
+@limiter.limit("10/minute")
 async def transcribe_audio(
+        request: Request,
         audio: UploadFile = File(..., description="Arquivo de áudio (m4a/mp3/wav/ogg...)"),
         language: str = Query("pt", description="Idioma (ex.: 'pt', 'en', 'auto' ...)")
     ):
