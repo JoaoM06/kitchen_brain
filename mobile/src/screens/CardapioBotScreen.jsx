@@ -20,18 +20,15 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 import * as Sharing from "expo-sharing";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import SafeScreen from "../components/SafeScreen";
 import FooterNav from "../components/FooterNav";
 import { colors } from "../theme/colors";
 import { addSavedMenu, getSavedMenus } from "../storage/savedMenus";
-import { BASE_URL } from "../api/client";
+import { chatCardapiobot } from "../api/cardapiobot";
+import { fetchPantry } from "../api/stock";
 import { getLocalStockItems, getLocalExpiringItems } from "../data/stock";
 import { generateMenuPdf } from "../utils/menuPdf";
-
-const GEMINI_MODEL = "gemini-2.5-flash-lite";
-const API_KEY = "AIzaSyAH6qpSJoleMZT7XcfkEPK8ThJegPHKjGw";
 
 const EMOJIS = ["😀","😁","😂","😊","😍","😋","😎","🤔","🙌","👍","👎","🥗","🍲","🍛","🍳","🥪","🍎","🥦","🧀","🥖","🍗"];
 
@@ -528,16 +525,8 @@ export default function CardapioBotScreen({ navigation }) {
     let isMounted = true;
     (async () => {
       try {
-        const token = await AsyncStorage.getItem("auth_token");
-        if (!token) {
-          applyLocalStockFallback();
-          return;
-        }
-        const res = await fetch(`${BASE_URL}/me/pantry`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`Pantry HTTP ${res.status}`);
-        const data = await res.json();
+        // O token é injetado pelo interceptor do client.js (ver api/stock.js).
+        const data = await fetchPantry();
         if (!isMounted) return;
         const normalized = normalizePantryFromApi(data?.items);
         if (!normalized.length) {
@@ -643,51 +632,41 @@ export default function CardapioBotScreen({ navigation }) {
 
   const canSend = text.trim().length > 0 && !loading;
 
-  const callGemini = async (body, retries = 3) => {
-    if (!API_KEY) throw new Error("Falta GEMINI_API_KEY em app.json -> extra");
+  const callGemini = async (prompt, retries = 3) => {
     setLoading(true);
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${API_KEY}`;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-
-        if (!res.ok) {
-          const txt = await res.text().catch(() => "");
-
-          // Se for erro 503 (overloaded) ou 429 (rate limit), tenta novamente
-          if ((res.status === 503 || res.status === 429) && attempt < retries) {
-            const waitTime = Math.min(1000 * Math.pow(2, attempt), 8000); // Backoff exponencial até 8s
-            console.log(`⏳ Gemini sobrecarregado. Tentando novamente em ${waitTime/1000}s... (${attempt + 1}/${retries})`);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-            continue;
-          }
-
-          throw new Error(`Gemini HTTP ${res.status}: ${txt}`);
-        }
-
-        const data = await res.json();
+        // A chave do Gemini vive apenas no backend; o app só envia o prompt
+        // como mensagem de usuário para /cardapiobot/chat. O token de
+        // autenticação é injetado automaticamente pelo client.js. Uma sessão
+        // inválida volta como 401 e é tratada no catch abaixo.
+        const data = await chatCardapiobot([{ role: "user", content: prompt }], null);
         setLoading(false);
 
-        const txt =
-          data?.candidates?.[0]?.content?.parts?.map((p) => p?.text).filter(Boolean).join("\n")?.trim() || "";
-        if (!txt) throw new Error("Resposta vazia do Gemini");
+        const txt = String(data?.response || "").trim();
+        if (!txt) throw new Error("Resposta vazia do servidor");
         return txt;
 
       } catch (error) {
+        const status = error?.response?.status;
+
+        // 503 (IA indisponível/sobrecarregada) ou 429 (rate limit): backoff e retry
+        if ((status === 503 || status === 429) && attempt < retries) {
+          const waitTime = Math.min(1000 * Math.pow(2, attempt), 8000);
+          console.log(`⏳ IA indisponível. Tentando novamente em ${waitTime / 1000}s... (${attempt + 1}/${retries})`);
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+          continue;
+        }
+
         if (attempt === retries) {
           setLoading(false);
           throw error;
         }
-        // Se for erro de rede, tenta novamente
+
         const waitTime = Math.min(1000 * Math.pow(2, attempt), 8000);
-        console.log(`⚠️ Erro de conexão. Tentando novamente em ${waitTime/1000}s...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+        console.log(`⚠️ Erro de conexão. Tentando novamente em ${waitTime / 1000}s...`);
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
       }
     }
   };
@@ -737,23 +716,14 @@ export default function CardapioBotScreen({ navigation }) {
     const shouldUseManualContext = useManualContext;
     const promptContext = shouldUseManualContext ? requestContext : defaultContext;
     const prompt = buildPrompt(content, promptContext);
-    const requestBody = {
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, topP: 0.95, topK: 40, maxOutputTokens: 9000 },
-    };
-    const debugMsg = {
-      id: `${baseId}-debug`,
-      role: "bot",
-      text: `DEBUG Gemini payload:\n${JSON.stringify(requestBody, null, 2)}`,
-    };
 
-    setMessages((prev) => [...prev, userMsg, debugMsg, { id: "typing", role: "bot", isTyping: true }]);
+    setMessages((prev) => [...prev, userMsg, { id: "typing", role: "bot", isTyping: true }]);
     setText("");
     setShowEmoji(false);
     scrollToEnd();
 
     try {
-      const reply = await callGemini(requestBody);
+      const reply = await callGemini(prompt);
       await finishWithParsedMenu(parseMenuChip(reply), { userText: content });
     } catch (e) {
       console.warn("CardapioBot", e);
@@ -766,15 +736,16 @@ export default function CardapioBotScreen({ navigation }) {
         });
       } else {
         // Mensagem de erro mais específica
-        let errorMessage = "Ops! Não consegui falar com o Gemini agora.";
+        const status = e?.response?.status;
+        let errorMessage = "Ops! Não consegui gerar o cardápio agora.";
 
-        if (e.message?.includes("503")) {
-          errorMessage = "😔 O servidor do Gemini está sobrecarregado no momento. Por favor, aguarde alguns minutos e tente novamente.";
-        } else if (e.message?.includes("429")) {
+        if (status === 503) {
+          errorMessage = "😔 O serviço de IA está indisponível no momento. Por favor, aguarde alguns minutos e tente novamente.";
+        } else if (status === 429) {
           errorMessage = "⏱️ Você atingiu o limite de requisições. Aguarde um momento antes de tentar novamente.";
-        } else if (e.message?.includes("401") || e.message?.includes("403")) {
-          errorMessage = "🔑 Erro de autenticação. Verifique sua chave API (GEMINI_API_KEY).";
-        } else if (e.message?.includes("network") || e.message?.includes("fetch")) {
+        } else if (status === 401 || status === 403) {
+          errorMessage = "🔑 Sua sessão expirou. Faça login novamente para continuar.";
+        } else if (e.message?.includes("network") || e.message?.includes("fetch") || e.message?.includes("Network")) {
           errorMessage = "📡 Erro de conexão com a internet. Verifique sua rede e tente novamente.";
         }
 
@@ -901,7 +872,7 @@ export default function CardapioBotScreen({ navigation }) {
                 Conte o que precisa e eu gero um cardápio completo seguindo preferências, estoque e metas.
               </Text>
             </View>
-            <InfoBadge label="Modelo" value={GEMINI_MODEL} compact />
+            <InfoBadge label="Assistente" value="CardapioBot IA" compact />
           </View>
 
           <Section title="Resumo rápido" description="Dados vindos do perfil e onboarding.">
@@ -1676,15 +1647,17 @@ function parseMenuChip(raw) {
 }
 
 function shouldUseDemoCardapio(error) {
-  if (!API_KEY) return true;
   if (!error) return false;
+  const status = error?.response?.status;
+  // IA indisponível/erro no backend → cai para cardápio de demonstração
+  if (status === 503 || status === 500) return true;
   const msg = String(error.message || "").toLowerCase();
   return (
     msg.includes("resposta vazia") ||
     msg.includes("failed to fetch") ||
     msg.includes("network request failed") ||
-    msg.includes("gemini http 4") ||
-    msg.includes("gemini http 5")
+    msg.includes("status code 5") ||
+    msg.includes("timeout")
   );
 }
 
