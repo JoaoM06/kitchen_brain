@@ -2,6 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.sentry import init_sentry
+
+# Inicializa o Sentry antes de criar o app, para capturar erros já na subida.
+init_sentry()
 
 # Rotas
 from app.api.routes.auth import router as auth_router
@@ -51,3 +55,8 @@ app.include_router(lista_router)
 app.include_router(barcode_router)
 app.include_router(recipes_router)
 app.include_router(cardapiobot_router)
+
+# Endpoint de teste do Sentry — só existe em dev.
+if settings.ENVIRONMENT == "dev":
+    from app.api.routes.dev import router as dev_router
+    app.include_router(dev_router)
