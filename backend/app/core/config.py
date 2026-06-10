@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"
 
+    # Observabilidade (Sentry)
+    SENTRY_DSN: Optional[str] = None
+    ENVIRONMENT: str = "dev"  # dev | staging | prod
+    SENTRY_RELEASE: Optional[str] = None
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
+
     class Config:
         env_file = ".env"
 

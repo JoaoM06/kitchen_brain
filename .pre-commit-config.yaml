@@ -1,0 +1,21 @@
+# Hooks locais de pré-commit. Instale com: pip install pre-commit && pre-commit install
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^backend/
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (mobile)
+        entry: npx --prefix mobile eslint --config mobile/eslint.config.js
+        language: system
+        files: ^mobile/.*\.(jsx?|mjs)$

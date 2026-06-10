@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import SafeScreen from "../components/SafeScreen";
@@ -95,7 +95,10 @@ export default function LoginScreen({ navigation }) {
 
         <Text style={styles.or}>ou</Text>
 
-        <Pressable style={styles.socialButton}>
+        <Pressable
+          style={styles.socialButton}
+          onPress={() => Alert.alert("Em breve", "Login com Google ainda não está disponível.")}
+        >
           <View style={styles.socialContent}>
             <View style={styles.socialIcon}>
               <Ionicons name="logo-google" size={20} color="#DB4437" />
@@ -104,7 +107,10 @@ export default function LoginScreen({ navigation }) {
           </View>
         </Pressable>
 
-        <Pressable style={styles.socialButton}>
+        <Pressable
+          style={styles.socialButton}
+          onPress={() => Alert.alert("Em breve", "Login com Apple ainda não está disponível.")}
+        >
           <View style={styles.socialContent}>
             <View style={styles.socialIcon}>
               <Ionicons name="logo-apple" size={22} color={colors.text} />
@@ -113,7 +119,10 @@ export default function LoginScreen({ navigation }) {
           </View>
         </Pressable>
 
-        <Pressable style={styles.socialButton}>
+        <Pressable
+          style={styles.socialButton}
+          onPress={() => Alert.alert("Em breve", "Login com Facebook ainda não está disponível.")}
+        >
           <View style={styles.socialContent}>
             <View style={styles.socialIcon}>
               <Ionicons name="logo-facebook" size={22} color="#1877F2" />

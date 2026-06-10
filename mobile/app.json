@@ -24,9 +24,6 @@
     },
     "web": {
       "favicon": "./assets/imgs/logo-kitchenbrain.png"
-    },
-    "extra": {
-      "GEMINI_API_KEY": "AIzaSyAH6qpSJoleMZT7XcfkEPK8ThJegPHKjGw"
     }
   }
 }
