@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -7,6 +9,8 @@ from faster_whisper import WhisperModel
 import tempfile, shutil, os
 from unidecode import unidecode
 import re
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 from app.db.session import get_db
@@ -47,14 +51,15 @@ async def transcribe_audio(
         text = " ".join([s.text for s in segments]).strip()
         return TranscribeOut(text=text or "")
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Falha na transcrição: {e}")
+    except Exception:
+        logger.exception("transcription_failed")
+        raise HTTPException(status_code=500, detail="Erro interno na transcrição.")
     finally:
         try:
             if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)
         except Exception:
-            pass
+            logger.debug("temp_file_cleanup_failed", exc_info=True)
 
 
 # Rota parse text com Gemini (condicional)
@@ -143,8 +148,9 @@ def format_text(body: TextIn):
             },
         )
         return response.parsed
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Falha ao formatar texto: {e}")
+    except Exception:
+        logger.exception("parse_text_failed")
+        raise HTTPException(status_code=500, detail="Erro interno ao formatar texto.")
 
 
 # Match de produtos genéricos

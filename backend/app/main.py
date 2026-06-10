@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.sentry import init_sentry
+from app.core.logging import configure_logging
+
+# Configure logging before any route modules are imported so their loggers inherit the setup
+configure_logging(log_level=settings.LOG_LEVEL, log_format=settings.LOG_FORMAT)
 
 # Inicializa o Sentry antes de criar o app, para capturar erros já na subida.
 init_sentry()
@@ -17,6 +21,7 @@ from app.api.routes.lista_compras import router as lista_router
 from app.api.routes.barcode import router as barcode_router
 from app.api.routes.recipes import router as recipes_router
 from app.api.routes.cardapiobot import router as cardapiobot_router
+from app.middlewares.request_logger import RequestLoggerMiddleware
 
 # Criar tabelas automaticamente (apenas em dev)
 from app.db.base import Base
@@ -24,6 +29,8 @@ from app.db.session import engine
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="KitchenBrain API", version="0.1.0")
+
+app.add_middleware(RequestLoggerMiddleware)
 
 # CORS
 origins = (

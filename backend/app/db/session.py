@@ -3,9 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
 _db_url = str(settings.DATABASE_URL)
-# `options` é um connect_arg específico do psycopg/PostgreSQL; passá-lo para
-# outros drivers (ex.: SQLite usado nos testes) levanta TypeError.
-_connect_args = {"options": "-c client_encoding=utf8"} if _db_url.startswith("postgres") else {}
+_connect_args = {"options": "-c client_encoding=utf8"} if "postgresql" in _db_url else {}
 
 engine = create_engine(
     _db_url,

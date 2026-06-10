@@ -1,5 +1,9 @@
+import logging
 import os
 from typing import Callable
+
+# Suppress INFO/DEBUG logs during tests to avoid polluting pytest output
+logging.getLogger().setLevel(logging.WARNING)
 
 import pytest
 from fastapi.testclient import TestClient
