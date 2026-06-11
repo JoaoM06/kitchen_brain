@@ -39,3 +39,25 @@ def test_transcribe_rejects_invalid_content_type(client):
     )
     assert response.status_code == 400
     assert "arquivo de áudio" in response.json()["detail"]
+
+
+# --- HTTPException não vaza stack trace (card 9) ---
+
+
+class _BoomModel:
+    def transcribe(self, *args, **kwargs):
+        raise RuntimeError("segredo-interno /caminho/secreto linha SQL")
+
+
+def test_transcribe_erro_retorna_detail_generico(monkeypatch, client):
+    monkeypatch.setattr(transcribe_module, "model", _BoomModel())
+
+    response = client.post(
+        "/voice/transcribe",
+        files={"audio": ("voz.wav", io.BytesIO(b"fake"), "audio/wav")},
+    )
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Falha ao processar o áudio."
+    # A mensagem da exceção interna NÃO pode aparecer na resposta.
+    assert "segredo-interno" not in response.text
+    assert "caminho/secreto" not in response.text

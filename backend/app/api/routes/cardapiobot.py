@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
 from datetime import date, timedelta
 import json
+import logging
 import uuid
 
 from app.db.session import get_db
@@ -18,6 +19,8 @@ from app.db.models.recipe import Receita, Cardapio, Refeicao
 from app.core.config import settings
 
 router = APIRouter(prefix="/cardapiobot", tags=["cardapiobot"])
+
+logger = logging.getLogger(__name__)
 
 
 # ========== Schemas ==========
@@ -237,10 +240,12 @@ def generate_cardapio(
 
         return CardapioResponse(**cardapio_data)
 
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao processar resposta da IA: {e}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro na geração do cardápio: {e}")
+    except json.JSONDecodeError:
+        logger.exception("Erro ao processar resposta da IA")
+        raise HTTPException(status_code=500, detail="Falha ao processar a resposta da IA.")
+    except Exception:
+        logger.exception("Erro na geração do cardápio")
+        raise HTTPException(status_code=500, detail="Falha ao gerar o cardápio.")
 
 
 @router.post("/chat")
@@ -296,8 +301,9 @@ Seja conciso e útil. Use emojis ocasionalmente para tornar a conversa agradáve
             "role": "assistant"
         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro no chat: {e}")
+    except Exception:
+        logger.exception("Erro no chat do CardapioBot")
+        raise HTTPException(status_code=500, detail="Falha ao processar a mensagem.")
 
 
 @router.post("/save")
@@ -342,9 +348,10 @@ def save_cardapio(
             "message": "Cardápio salvo com sucesso!"
         }
 
-    except Exception as e:
+    except Exception:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Erro ao salvar cardápio: {e}")
+        logger.exception("Erro ao salvar cardápio")
+        raise HTTPException(status_code=500, detail="Falha ao salvar o cardápio.")
 
 
 @router.get("/history", response_model=List[CardapioHistoryItem])
