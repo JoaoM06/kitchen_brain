@@ -57,17 +57,31 @@ async def transcribe_audio(
             pass
 
 
-# Rota parse text com Gemini (condicional)
-def _get_genai_client():
-    if not settings.GEMINI_API_KEY:
+# Rota parse text com Gemini (inicialização preguiçosa)
+_genai_client = None
+_genai_client_key = None
+
+
+def get_genai_client():
+    """Retorna o cliente do Gemini, inicializado sob demanda (lazy).
+
+    Não conecta no import (boot do uvicorn não depende do Gemini) e tolera
+    troca de ``GEMINI_API_KEY`` em runtime: se a key mudar, recria o cliente.
+    Retorna ``None`` quando não há key configurada ou o SDK não está instalado.
+    """
+    global _genai_client, _genai_client_key
+    key = settings.GEMINI_API_KEY
+    if not key:
         return None
+    if _genai_client is not None and _genai_client_key == key:
+        return _genai_client
     try:
         from google import genai
-        return genai.Client(api_key=settings.GEMINI_API_KEY)
+        _genai_client = genai.Client(api_key=key)
+        _genai_client_key = key
+        return _genai_client
     except ImportError:
         return None
-
-genai_client = _get_genai_client()
 
 
 class TextIn(BaseModel):
@@ -131,10 +145,11 @@ def generate_prompt(text: str):
 
 @router.post("/parse-text", response_model=List[StructuredResponse])
 def format_text(body: TextIn):
-    if not genai_client:
+    client = get_genai_client()
+    if not client:
         raise HTTPException(status_code=503, detail="Serviço de IA não configurado. Configure GEMINI_API_KEY.")
     try:
-        response = genai_client.models.generate_content(
+        response = client.models.generate_content(
             model=settings.GEMINI_MODEL_NAME,
             contents=generate_prompt(body.text),
             config={
