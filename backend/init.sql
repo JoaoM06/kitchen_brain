@@ -2,6 +2,9 @@
 -- Este script é executado automaticamente pelo PostgreSQL na criação do container
 
 -- Habilitar extensão pg_trgm para busca por similaridade (trigram)
+-- REQUISITO DE PRODUÇÃO: a busca de produtos genéricos (barcode/voice) depende
+-- desta extensão. Sem ela o backend recusa subir em staging/prod (ver
+-- app/main.py:_verify_pg_trgm). Exige privilégio CREATE EXTENSION no Postgres.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Habilitar extensão unaccent para normalização de texto

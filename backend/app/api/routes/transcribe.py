@@ -11,6 +11,7 @@ import re
 from app.core.config import settings
 from app.db.session import get_db
 from app.db.models.product import ProdutoGenerico
+from app.services.product_search import prefix_search_genericos
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 
@@ -190,7 +191,8 @@ def _query_candidates(
     if not norm:
         return []
 
-    try:
+    if db.get_bind().dialect.name == "postgresql":
+        # Postgres: similaridade trigram (indexada por pg_trgm).
         rows = (
             db.query(
                 ProdutoGenerico.id,
@@ -219,45 +221,20 @@ def _query_candidates(
             if float(sim) >= MIN_CAND_SCORE
         ]
 
-    except Exception:
-        all_rows = (
-            db.query(
-                ProdutoGenerico.id,
-                ProdutoGenerico.nome,
-                ProdutoGenerico.nome_normalizado,
-                ProdutoGenerico.categoria,
-                ProdutoGenerico.url_imagem,
-            )
-            .limit(2000)
-            .all()
+    # Fora do Postgres (ex.: SQLite): busca por prefixo indexada, sem varrer tudo.
+    scored = prefix_search_genericos(db, norm, limit=limit)
+    return [
+        ProductCandidate(
+            id=str(g.id),
+            name=g.nome,
+            normalized=g.nome_normalizado,
+            category=g.categoria,
+            image_url=g.url_imagem,
+            score=float(s),
         )
-        terms = norm.split()
-
-        def simple_score(n: Optional[str]) -> float:
-            if not n or not terms:
-                return 0.0
-            hits = sum(1 for t in terms if t in n)
-            return hits / len(terms)
-
-        scored = [
-            (rid, disp, norm_name, cat, img, simple_score(norm_name))
-            for rid, disp, norm_name, cat, img in all_rows
-        ]
-        scored = [r for r in scored if r[5] >= MIN_CAND_SCORE]
-        scored.sort(key=lambda x: x[5], reverse=True)
-        top = scored[:limit]
-
-        return [
-            ProductCandidate(
-                id=str(rid),
-                name=disp,
-                normalized=norm_name,
-                category=cat,
-                image_url=img,
-                score=float(s)
-            )
-            for rid, disp, norm_name, cat, img, s in top
-        ]
+        for g, s in scored
+        if s >= MIN_CAND_SCORE
+    ]
 
 
 @router.post("/match-items", response_model=List[MatchResult])

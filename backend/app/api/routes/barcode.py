@@ -11,6 +11,7 @@ import re
 
 from app.db.session import get_db
 from app.db.models.product import ProdutoGenerico, Produto, CodigoBarras
+from app.services.product_search import prefix_search_genericos
 
 # Import do crawler
 import sys
@@ -87,8 +88,8 @@ def find_best_generico(db: Session, nome: str, marca: str = None) -> Optional[tu
     if not norm:
         return None
 
-    try:
-        # Tenta usar pg_trgm
+    if db.get_bind().dialect.name == "postgresql":
+        # Postgres: busca por similaridade trigram (indexada por pg_trgm).
         result = (
             db.query(
                 ProdutoGenerico,
@@ -98,33 +99,14 @@ def find_best_generico(db: Session, nome: str, marca: str = None) -> Optional[tu
             .order_by(func.similarity(ProdutoGenerico.nome_normalizado, norm).desc())
             .first()
         )
-
         if result:
             return (result[0], float(result[1]))
+        return None
 
-    except Exception:
-        # Fallback sem trigram
-        pass
-
-    # Fallback: busca simples por substring
-    produtos = db.query(ProdutoGenerico).limit(1000).all()
-    termos = norm.split()
-
-    best_match = None
-    best_score = 0.0
-
-    for p in produtos:
-        p_norm = p.nome_normalizado or ""
-        matches = sum(1 for t in termos if t in p_norm)
-        score = matches / len(termos) if termos else 0
-
-        if score > best_score:
-            best_score = score
-            best_match = p
-
-    if best_match and best_score >= 0.3:
-        return (best_match, best_score)
-
+    # Fora do Postgres (ex.: SQLite): busca por prefixo indexada, sem varrer tudo.
+    scored = prefix_search_genericos(db, norm, limit=1)
+    if scored and scored[0][1] >= 0.3:
+        return scored[0]
     return None
 
 
