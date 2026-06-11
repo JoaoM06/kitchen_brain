@@ -5,12 +5,11 @@ from sqlalchemy import func
 from typing import Optional, Literal, List
 from faster_whisper import WhisperModel
 import tempfile, shutil, os
-from unidecode import unidecode
-import re
 
 from app.core.config import settings
 from app.db.session import get_db
 from app.db.models.product import ProdutoGenerico
+from app.utils.text import normalize_name
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 
@@ -163,16 +162,6 @@ class MatchResult(BaseModel):
     product_normalized: Optional[str]
     candidates: List[ProductCandidate]
     suggested_action: Literal["select_candidate", "create_new"]
-
-
-_STOPWORDS = {"de","do","da","dos","das","e","em","para","no","na","a","o","um","uma","uns","umas","com"}
-
-
-def normalize_name(s: str) -> str:
-    s = unidecode(s or "").lower()
-    s = re.sub(r"[^a-z0-9\s]", " ", s)
-    parts = [p for p in s.split() if p and p not in _STOPWORDS]
-    return " ".join(parts)
 
 
 TRIGRAM_MIN = 0.25
