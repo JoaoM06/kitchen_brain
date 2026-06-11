@@ -16,6 +16,8 @@ from app.db.session import get_db
 from app.db.models.user import User
 from app.db.models.items import Item
 from app.schemas.itensEstoque import ItemCreate, ItemOut
+from app.services.products import get_or_create_generico
+from sqlalchemy.exc import IntegrityError
 
 # NOTA: get_item/create_item operam sobre o modelo legado `Item` e ainda são
 # usados pelas rotas deprecated abaixo e pelo fluxo de lista_compras. A remoção
@@ -118,11 +120,22 @@ def get_or_create_local(db: Session, user_id: uuid.UUID, name_in: Optional[str])
     )
     if loc:
         return loc.id
-    # cria automaticamente
-    loc = LocalEstoque(usuario_id=user_id, nome=nice, descricao=None)
-    db.add(loc)
-    db.flush()
-    return loc.id
+    # cria automaticamente — idempotente sob concorrência (UNIQUE usuario_id+nome)
+    savepoint = db.begin_nested()
+    try:
+        loc = LocalEstoque(usuario_id=user_id, nome=nice, descricao=None)
+        db.add(loc)
+        db.flush()
+        savepoint.commit()
+        return loc.id
+    except IntegrityError:
+        savepoint.rollback()
+        loc = (
+            db.query(LocalEstoque)
+            .filter(LocalEstoque.usuario_id == user_id, LocalEstoque.nome.ilike(nice))
+            .first()
+        )
+        return loc.id if loc else None
 
 def get_or_create_generic(db: Session, name: str, normalized: Optional[str]) -> ProdutoGenerico:
     norm = (normalized or name or "").strip().lower()
@@ -140,15 +153,8 @@ def get_or_create_generic(db: Session, name: str, normalized: Optional[str]) -> 
     )
     if existing2:
         return existing2
-    g = ProdutoGenerico(
-        nome=name.strip(),
-        nome_normalizado=norm,
-        url_imagem=None,
-        categoria=None
-    )
-    db.add(g)
-    db.flush()
-    return g
+    # Inserção idempotente sob concorrência (UNIQUE em nome_normalizado).
+    return get_or_create_generico(db, nome=name, nome_normalizado=norm)
 
 @router.post("/confirm-voice", response_model=ConfirmResult)
 def confirm_voice_items(
