@@ -1,5 +1,8 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text as _sql_text
 
 from app.core.config import settings
 from app.core.sentry import init_sentry
@@ -22,6 +25,33 @@ from app.api.routes.cardapiobot import router as cardapiobot_router
 from app.db.base import Base
 from app.db.session import engine
 Base.metadata.create_all(bind=engine)
+
+# A busca de produtos genéricos depende da extensão pg_trgm no Postgres
+# (ver backend/init.sql). Sem ela não há fallback quadrático — o boot é
+# recusado em produção/staging para falhar cedo e de forma clara.
+_logger = logging.getLogger(__name__)
+
+
+def _verify_pg_trgm() -> None:
+    if engine.dialect.name != "postgresql":
+        return
+    with engine.connect() as conn:
+        installed = conn.execute(
+            _sql_text("SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm'")
+        ).first()
+    if installed:
+        return
+    msg = (
+        "Extensão pg_trgm ausente no Postgres. Rode "
+        "'CREATE EXTENSION IF NOT EXISTS pg_trgm;' (ver backend/init.sql) "
+        "antes de subir o backend."
+    )
+    if settings.ENVIRONMENT in ("staging", "prod"):
+        raise RuntimeError(msg)
+    _logger.warning(msg)
+
+
+_verify_pg_trgm()
 
 app = FastAPI(title="KitchenBrain API", version="0.1.0")
 
