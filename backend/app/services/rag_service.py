@@ -57,15 +57,27 @@ class RecipeRAGService:
 
         all_recipes = query.limit(500).all()
 
-        for recipe in all_recipes:
-            # Carrega ingredientes da receita
-            ingredients = (
-                self.db.query(IngredienteReceita.nome_livre)
-                .filter(IngredienteReceita.receita_id == recipe.id)
+        # Carrega TODOS os ingredientes das receitas em UMA query (evita N+1:
+        # antes era 1 query por receita, até 501 queries por chamada).
+        recipe_ids = [recipe.id for recipe in all_recipes]
+        ingredientes_por_receita: Dict[Any, List[str]] = {}
+        if recipe_ids:
+            rows = (
+                self.db.query(
+                    IngredienteReceita.receita_id,
+                    IngredienteReceita.nome_livre,
+                )
+                .filter(IngredienteReceita.receita_id.in_(recipe_ids))
                 .all()
             )
+            for receita_id, nome_livre in rows:
+                ingredientes_por_receita.setdefault(receita_id, []).append(nome_livre)
 
-            ing_names = [self._normalize(i.nome_livre or "") for i in ingredients]
+        for recipe in all_recipes:
+            # Ingredientes já carregados em memória (sem nova query por receita)
+            ingredients = ingredientes_por_receita.get(recipe.id, [])
+
+            ing_names = [self._normalize(nome or "") for nome in ingredients]
 
             # Conta matches
             matches = sum(
