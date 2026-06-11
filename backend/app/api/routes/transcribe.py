@@ -5,6 +5,7 @@ from sqlalchemy import func
 from typing import Optional, Literal, List
 from faster_whisper import WhisperModel
 import tempfile, shutil, os
+import logging
 from unidecode import unidecode
 import re
 
@@ -13,6 +14,8 @@ from app.db.session import get_db
 from app.db.models.product import ProdutoGenerico
 
 router = APIRouter(prefix="/voice", tags=["voice"])
+
+logger = logging.getLogger(__name__)
 
 WHISPER_MODEL_SIZE = "small"
 WHISPER_COMPUTE = "int8"  # melhor para CPU
@@ -47,8 +50,9 @@ async def transcribe_audio(
         text = " ".join([s.text for s in segments]).strip()
         return TranscribeOut(text=text or "")
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Falha na transcrição: {e}")
+    except Exception:
+        logger.exception("Falha na transcrição do áudio")
+        raise HTTPException(status_code=500, detail="Falha ao processar o áudio.")
     finally:
         try:
             if tmp_path and os.path.exists(tmp_path):
@@ -143,8 +147,9 @@ def format_text(body: TextIn):
             },
         )
         return response.parsed
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Falha ao formatar texto: {e}")
+    except Exception:
+        logger.exception("Falha ao formatar texto")
+        raise HTTPException(status_code=500, detail="Falha ao processar o texto.")
 
 
 # Match de produtos genéricos
