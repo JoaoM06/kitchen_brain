@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     SENTRY_RELEASE: Optional[str] = None
     SENTRY_TRACES_SAMPLE_RATE: float = 0.1
 
+    # Upload de mídia (foto de perfil)
+    MEDIA_ROOT: str = "media"
+    MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024  # 5 MB
+
     class Config:
         env_file = ".env"
 
