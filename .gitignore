@@ -22,3 +22,7 @@ __pycache__/
 *.db
 *.sqlite3
 
+# Mídia local (upload de foto de perfil) — servida em dev, S3/CDN em prod
+backend/media/
+media/
+
