@@ -9,15 +9,10 @@ import os
 # Adicionar o diretório raiz ao path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from unidecode import unidecode
 from sqlalchemy.dialects.postgresql import insert
 from app.db.session import SessionLocal
 from app.db.models.product import ProdutoGenerico
-
-
-def normalize_name(name: str) -> str:
-    """Normaliza nome para busca (lowercase, sem acentos)."""
-    return unidecode(name).lower().strip()
+from app.utils.text import normalize_name
 
 
 # Lista de produtos genéricos organizados por categoria

@@ -6,11 +6,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Optional, List
-from unidecode import unidecode
-import re
 
 from app.db.session import get_db
 from app.db.models.product import ProdutoGenerico, Produto, CodigoBarras
+from app.utils.text import normalize_name
 
 # Import do crawler
 import sys
@@ -63,16 +62,6 @@ class ProductCandidate(BaseModel):
 
 
 # Helpers
-STOPWORDS = {"de", "do", "da", "dos", "das", "e", "em", "para", "no", "na", "a", "o"}
-
-def normalize_name(s: str) -> str:
-    """Normaliza nome para busca."""
-    s = unidecode(s or "").lower()
-    s = re.sub(r"[^a-z0-9\s]", " ", s)
-    parts = [p for p in s.split() if p and p not in STOPWORDS]
-    return " ".join(parts)
-
-
 def find_best_generico(db: Session, nome: str, marca: str = None) -> Optional[tuple]:
     """
     Encontra o melhor ProdutoGenerico para um produto.
