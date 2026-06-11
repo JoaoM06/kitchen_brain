@@ -11,6 +11,7 @@ import re
 
 from app.db.session import get_db
 from app.db.models.product import ProdutoGenerico, Produto, CodigoBarras
+from app.services.products import get_or_create_generico
 
 # Import do crawler
 import sys
@@ -229,15 +230,14 @@ def register_barcode(req: BarcodeRegisterRequest, db: Session = Depends(get_db))
         generico_id = generico.id
 
     else:
-        # Cria novo genérico
+        # Obtém ou cria genérico de forma idempotente (sem corrida em nome_normalizado)
         nome_norm = normalize_name(req.nome)
-        generico = ProdutoGenerico(
+        generico = get_or_create_generico(
+            db,
             nome=req.nome,
             nome_normalizado=nome_norm,
             categoria=req.categoria,
         )
-        db.add(generico)
-        db.flush()
         generico_id = generico.id
 
     # Cria Produto

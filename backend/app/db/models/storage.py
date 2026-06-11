@@ -2,7 +2,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING
-from sqlalchemy import String, Text, Date, ForeignKey, Numeric, CheckConstraint
+from sqlalchemy import String, Text, Date, ForeignKey, Numeric, CheckConstraint, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -22,6 +22,10 @@ class LocalEstoque(Base):
     ordem: Mapped[int] = mapped_column(default=0)
 
     itens: Mapped[list["ItemEstoque"]] = relationship(back_populates="local")
+
+    __table_args__ = (
+        UniqueConstraint("usuario_id", "nome", name="uq_local_usuario_nome"),
+    )
 
 
 class ItemEstoque(Base):
